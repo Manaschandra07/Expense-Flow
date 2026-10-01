@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Finance Tracker</title>
+    <meta name="description" content="A sleek, mobile-friendly personal finance tracker with cloud sync, income and expense analytics, custom categories, and cash summaries.">
+    <meta property="og:title" content="Finance Tracker">
+    <meta property="og:description" content="A sleek, mobile-friendly personal finance tracker with cloud sync, income and expense analytics, custom categories, and cash summaries.">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Finance Tracker">
@@ -13,6 +16,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="/firebase-config.js"></script>
     <style>
         :root {
             --bg:         #0D1B2A;
@@ -442,7 +446,7 @@
     appleIconLink.href = ICON_DATA_URI;
     document.head.appendChild(appleIconLink);
 
-    const firebaseConfig = {
+    const firebaseConfig = window.firebaseConfig || {
         apiKey: "AIzaSyDVKDiOnC1Wqvbg7-vymDW5hdo5hmdZ5nI",
         authDomain: "finance-tracker-0710.firebaseapp.com",
         projectId: "finance-tracker-0710",
@@ -462,16 +466,135 @@
     let unsubsPrefs = null;
     let cashStatsVisible = false;
     let txOrderDesc = true; // true = latest first, false = oldest first
+    let isLocalGuest = false;
+    let localUid = 'guest_' + (localStorage.getItem('ft_guest_id') || Math.random().toString(36).substring(2, 9));
+    localStorage.setItem('ft_guest_id', localUid);
+
+    // --- TOAST & MODAL SYSTEM (Avoids window.alert/prompt/confirm in iframe) ---
+    function showToast(msg, duration = 3000) {
+        const toast = document.getElementById('custom-toast');
+        if (!toast) return;
+        toast.innerText = msg;
+        toast.style.display = 'block';
+        toast.style.opacity = '1';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => { toast.style.display = 'none'; }, 300);
+        }, duration);
+    }
+
+    function showCustomModal({ title, message, showInput = false, inputValue = '', onOk, onCancel }) {
+        const backdrop = document.getElementById('custom-modal-backdrop');
+        const titleEl = document.getElementById('custom-modal-title');
+        const msgEl = document.getElementById('custom-modal-message');
+        const inputContainer = document.getElementById('custom-modal-input-container');
+        const inputEl = document.getElementById('custom-modal-input');
+        const cancelBtn = document.getElementById('custom-modal-cancel');
+        const okBtn = document.getElementById('custom-modal-ok');
+
+        titleEl.innerText = title || 'Notice';
+        msgEl.innerText = message || '';
+        if (showInput) {
+            inputContainer.style.display = 'block';
+            inputEl.value = inputValue || '';
+        } else {
+            inputContainer.style.display = 'none';
+        }
+
+        cancelBtn.style.display = onCancel ? 'inline-block' : 'none';
+        backdrop.style.display = 'flex';
+
+        if (showInput) {
+            setTimeout(() => { inputEl.focus(); inputEl.select(); }, 50);
+        }
+
+        const cleanup = () => {
+            backdrop.style.display = 'none';
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            inputEl.onkeydown = null;
+        };
+
+        cancelBtn.onclick = () => {
+            cleanup();
+            if (onCancel) onCancel();
+        };
+
+        const handleOk = () => {
+            const val = inputEl.value;
+            cleanup();
+            if (onOk) onOk(val);
+        };
+
+        okBtn.onclick = handleOk;
+        inputEl.onkeydown = (e) => {
+            if (e.key === 'Enter') handleOk();
+            if (e.key === 'Escape') { cleanup(); if (onCancel) onCancel(); }
+        };
+    }
+
+    window.alert = function(msg) {
+        showToast(msg);
+    };
 
     // --- AUTH ---
     async function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        try { await auth.signInWithPopup(provider); } catch (e) { alert(e.message); }
+        try {
+            await auth.signInWithPopup(provider);
+        } catch (e) {
+            showToast("Google sign-in: " + e.message);
+        }
     }
+
     async function loginAsGuest() {
-        try { await auth.signInAnonymously(); } catch (e) { alert(e.message); }
+        try {
+            await auth.signInAnonymously();
+        } catch (e) {
+            console.warn("Firebase Anonymous Auth unavailable, activating local guest sandbox:", e);
+            enableLocalGuestMode();
+        }
     }
+
+    function enableLocalGuestMode() {
+        isLocalGuest = true;
+        const authScreen = document.getElementById('screen-auth');
+        const mainApp   = document.getElementById('main-app');
+        const navBar    = document.getElementById('app-nav');
+        authScreen.style.display = 'none';
+        authScreen.classList.remove('active');
+        mainApp.style.display = 'block';
+        navBar.style.display = 'flex';
+
+        document.getElementById('user-photo').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231E6091'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' /%3E%3C/svg%3E";
+        document.getElementById('user-name').innerText  = "Guest Account";
+        document.getElementById('user-email').innerText = "Temporary Sandbox";
+        document.getElementById('backup-reminder').innerText = "Guest Mode (Local Sandbox)";
+
+        const savedLocal = JSON.parse(localStorage.getItem('finance_data_local') || '[]');
+        entries = savedLocal;
+        entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+        populateCategories();
+        renderHome();
+        showToast("Started Guest Session");
+    }
+
     function logout() {
+        if (isLocalGuest) {
+            isLocalGuest = false;
+            const authScreen = document.getElementById('screen-auth');
+            const mainApp   = document.getElementById('main-app');
+            const navBar    = document.getElementById('app-nav');
+            authScreen.style.display = '';
+            authScreen.classList.add('active');
+            mainApp.style.display = 'none';
+            navBar.style.display = 'none';
+            entries = [];
+            renderHome();
+            if(document.getElementById('profile-menu').classList.contains('active')) toggleProfile();
+            return;
+        }
         if(unsubsFirestore) { unsubsFirestore(); unsubsFirestore = null; }
         if(unsubsPrefs) { unsubsPrefs(); unsubsPrefs = null; }
         auth.signOut();
@@ -480,6 +603,7 @@
     function toggleProfile() { document.getElementById('profile-menu').classList.toggle('active'); }
 
     auth.onAuthStateChanged(user => {
+        if (isLocalGuest) return;
         const authScreen = document.getElementById('screen-auth');
         const mainApp   = document.getElementById('main-app');
         const navBar    = document.getElementById('app-nav');
@@ -515,21 +639,35 @@
         if(unsubsFirestore) unsubsFirestore();
         if(unsubsPrefs) unsubsPrefs();
 
-        unsubsFirestore = db.collection("finance_data").where("uid","==",uid).onSnapshot(snap => {
-            entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            entries.sort((a,b) => new Date(b.date) - new Date(a.date));
-            populateCategories();
-            renderHome();
-        });
+        try {
+            unsubsFirestore = db.collection("finance_data").where("uid","==",uid).onSnapshot(snap => {
+                entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                populateCategories();
+                renderHome();
+            }, err => {
+                console.warn("Firestore sync notification:", err);
+                const local = JSON.parse(localStorage.getItem('finance_data_local') || '[]');
+                if (local.length > 0) {
+                    entries = local;
+                    entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                    renderHome();
+                }
+            });
 
-        unsubsPrefs = db.collection("user_prefs").doc(uid).onSnapshot(doc => {
-            if (doc.exists && doc.data().customCategories) {
-                customCategories = doc.data().customCategories;
-            } else {
-                customCategories = [];
-            }
-            populateCategories();
-        });
+            unsubsPrefs = db.collection("user_prefs").doc(uid).onSnapshot(doc => {
+                if (doc.exists && doc.data().customCategories) {
+                    customCategories = doc.data().customCategories;
+                } else {
+                    customCategories = [];
+                }
+                populateCategories();
+            }, err => {
+                console.warn("User prefs sync notification:", err);
+            });
+        } catch (e) {
+            console.warn("Firestore collection error:", e);
+        }
     }
 
     function populateCategories() {
@@ -560,15 +698,22 @@
 
     function triggerCategoryDeletion(val) {
         if (customCategories.includes(val)) {
-            if (confirm(`Do you want to completely delete the custom category "${val}"?`)) {
-                customCategories = customCategories.filter(cat => cat !== val);
-                const user = auth.currentUser;
-                if (user) {
-                    db.collection("user_prefs").doc(user.uid).set({ customCategories }, { merge: true });
-                }
-                populateCategories();
-                document.getElementById('f-category').value = 'Food';
-            }
+            showCustomModal({
+                title: "Delete Category",
+                message: `Do you want to completely delete the custom category "${val}"?`,
+                onOk: () => {
+                    customCategories = customCategories.filter(cat => cat !== val);
+                    const user = auth.currentUser;
+                    if (user && !isLocalGuest) {
+                        db.collection("user_prefs").doc(user.uid).set({ customCategories }, { merge: true }).catch(err => console.warn(err));
+                    }
+                    localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
+                    populateCategories();
+                    document.getElementById('f-category').value = 'Food';
+                    showToast(`Deleted category "${val}"`);
+                },
+                onCancel: () => {}
+            });
             return true;
         }
         return false;
@@ -586,35 +731,70 @@
 
     function handleCategorySelection(selectEl) {
         if (selectEl.value === 'Custom') {
-            const newCat = prompt("Enter custom category name:");
-            if (newCat && newCat.trim() !== '') {
-                const cleanedCat = newCat.trim();
-                if (!['Food','Entertainment','Loan','Friends','Custom'].includes(cleanedCat) && !customCategories.includes(cleanedCat)) {
-                    customCategories.push(cleanedCat);
-                    const user = auth.currentUser;
-                    if (user) {
-                        db.collection("user_prefs").doc(user.uid).set({ customCategories }, { merge: true });
+            showCustomModal({
+                title: "New Category",
+                message: "Enter custom category name:",
+                showInput: true,
+                onOk: (newCat) => {
+                    if (newCat && newCat.trim() !== '') {
+                        const cleanedCat = newCat.trim();
+                        if (!['Food','Entertainment','Loan','Friends','Custom'].includes(cleanedCat) && !customCategories.includes(cleanedCat)) {
+                            customCategories.push(cleanedCat);
+                            const user = auth.currentUser;
+                            if (user && !isLocalGuest) {
+                                db.collection("user_prefs").doc(user.uid).set({ customCategories }, { merge: true }).catch(err => console.warn(err));
+                            }
+                            localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
+                            populateCategories();
+                            selectEl.value = cleanedCat;
+                            showToast(`Category "${cleanedCat}" added`);
+                        } else {
+                            showToast("Category name already exists or is invalid.");
+                            selectEl.value = 'Food';
+                        }
+                    } else {
+                        selectEl.value = 'Food';
                     }
-                    populateCategories();
-                    selectEl.value = cleanedCat;
-                } else {
-                    alert("Category name already exists or is invalid.");
+                },
+                onCancel: () => {
                     selectEl.value = 'Food';
                 }
-            } else { selectEl.value = 'Food'; }
+            });
         }
     }
 
     // --- ROW LONG PRESS DELETE ---
+    function deleteEntryById(entryId) {
+        if (isLocalGuest) {
+            entries = entries.filter(e => e.id !== entryId);
+            localStorage.setItem('finance_data_local', JSON.stringify(entries));
+            renderHome();
+            showToast("Entry deleted");
+            return;
+        }
+        db.collection("finance_data").doc(entryId).delete().then(() => {
+            showToast("Entry deleted");
+        }).catch(err => {
+            console.warn("Delete error:", err);
+            entries = entries.filter(e => e.id !== entryId);
+            localStorage.setItem('finance_data_local', JSON.stringify(entries));
+            renderHome();
+            showToast("Entry deleted locally");
+        });
+    }
+
     function attachRowLongPress(row, entryId) {
         let timer = null;
         const start = (e) => {
             row.classList.add('pressing');
-            timer = setTimeout(async () => {
+            timer = setTimeout(() => {
                 row.classList.remove('pressing');
-                if (confirm("Delete this entry?")) {
-                    await db.collection("finance_data").doc(entryId).delete();
-                }
+                showCustomModal({
+                    title: "Delete Entry",
+                    message: "Delete this entry?",
+                    onOk: () => deleteEntryById(entryId),
+                    onCancel: () => {}
+                });
             }, 1000);
         };
         const cancel = () => {
@@ -630,9 +810,12 @@
         row.addEventListener('contextmenu', e => {
             e.preventDefault();
             cancel();
-            if (confirm("Delete this entry?")) {
-                db.collection("finance_data").doc(entryId).delete();
-            }
+            showCustomModal({
+                title: "Delete Entry",
+                message: "Delete this entry?",
+                onOk: () => deleteEntryById(entryId),
+                onCancel: () => {}
+            });
         });
     }
 
@@ -695,7 +878,8 @@
         e.preventDefault();
         const user = auth.currentUser;
         const newEntry = {
-            uid:      user.uid,
+            id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            uid:      user ? user.uid : localUid,
             ts:       Date.now(),
             date:     document.getElementById('f-date').value,
             desc:     document.getElementById('f-desc').value,
@@ -704,7 +888,27 @@
             type:     document.getElementById('f-type').value,
             mode:     document.getElementById('f-mode').value
         };
-        await db.collection("finance_data").add(newEntry);
+
+        if (isLocalGuest || !user) {
+            entries.unshift(newEntry);
+            entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+            localStorage.setItem('finance_data_local', JSON.stringify(entries));
+            renderHome();
+            showToast("Entry saved");
+        } else {
+            try {
+                await db.collection("finance_data").add(newEntry);
+                showToast("Entry saved to cloud");
+            } catch (err) {
+                console.warn("Firestore save error, saving locally:", err);
+                entries.unshift(newEntry);
+                entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                localStorage.setItem('finance_data_local', JSON.stringify(entries));
+                renderHome();
+                showToast("Entry saved locally");
+            }
+        }
+
         e.target.reset();
         document.getElementById('f-date').valueAsDate = new Date();
         document.getElementById('f-mode').value = 'online';
@@ -742,11 +946,42 @@
             hasSaved = true;
             const newRawValue = input.value.trim();
             if (newRawValue !== "" && newRawValue !== currentVal) {
-                if (field === 'amount') {
-                    const parsed = parseFloat(newRawValue);
-                    await db.collection("finance_data").doc(entryId).update({ amount: isNaN(parsed) ? 0 : parsed });
+                if (isLocalGuest) {
+                    const tx = entries.find(x => x.id === entryId);
+                    if (tx) {
+                        if (field === 'amount') {
+                            const parsed = parseFloat(newRawValue);
+                            tx.amount = isNaN(parsed) ? 0 : parsed;
+                        } else {
+                            tx.desc = newRawValue;
+                        }
+                        localStorage.setItem('finance_data_local', JSON.stringify(entries));
+                        renderHome();
+                        showToast("Updated");
+                    }
                 } else {
-                    await db.collection("finance_data").doc(entryId).update({ desc: newRawValue });
+                    try {
+                        if (field === 'amount') {
+                            const parsed = parseFloat(newRawValue);
+                            await db.collection("finance_data").doc(entryId).update({ amount: isNaN(parsed) ? 0 : parsed });
+                        } else {
+                            await db.collection("finance_data").doc(entryId).update({ desc: newRawValue });
+                        }
+                        showToast("Updated");
+                    } catch (err) {
+                        console.warn("Firestore update error, updating local:", err);
+                        const tx = entries.find(x => x.id === entryId);
+                        if (tx) {
+                            if (field === 'amount') {
+                                const parsed = parseFloat(newRawValue);
+                                tx.amount = isNaN(parsed) ? 0 : parsed;
+                            } else {
+                                tx.desc = newRawValue;
+                            }
+                            localStorage.setItem('finance_data_local', JSON.stringify(entries));
+                            renderHome();
+                        }
+                    }
                 }
             } else { el.innerHTML = originalHTML; }
         };
@@ -993,11 +1228,29 @@
                 });
             });
             Promise.all(writePromises)
-                .then(() => alert("Import Complete!"))
-                .catch(err => alert("Import Error: " + err.message));
+                .then(() => showToast("Import Complete!"))
+                .catch(err => showToast("Import Error: " + err.message));
         };
         reader.readAsText(input.files[0]);
     }
 </script>
+
+<!-- Custom Modal for Alerts, Confirms, and Prompts -->
+<div id="custom-modal-backdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:20px;">
+    <div style="background:var(--card-2);border:1px solid var(--border-hi);border-radius:16px;max-width:400px;width:100%;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,0.8);animation:fadeIn 0.2s ease;">
+        <h3 id="custom-modal-title" style="margin-top:0;margin-bottom:12px;color:var(--primary-hi);font-size:1.2rem;">Notice</h3>
+        <p id="custom-modal-message" style="color:var(--text-main);font-size:0.95rem;margin-bottom:18px;line-height:1.5;"></p>
+        <div id="custom-modal-input-container" style="display:none;margin-bottom:18px;">
+            <input type="text" id="custom-modal-input" style="width:100%;" placeholder="">
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:12px;">
+            <button id="custom-modal-cancel" class="btn-outline" style="min-width:80px;">Cancel</button>
+            <button id="custom-modal-ok" class="add-btn" style="height:40px;padding:0 20px;width:auto;min-width:80px;">OK</button>
+        </div>
+    </div>
+</div>
+<!-- Custom Toast Notification -->
+<div id="custom-toast" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--card-2);color:var(--text-main);border:1px solid var(--border-hi);border-radius:10px;padding:10px 20px;font-size:0.88rem;box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:9998;pointer-events:none;transition:opacity 0.3s ease;"></div>
+
 </body>
 </html>
