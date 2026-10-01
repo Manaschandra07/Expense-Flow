@@ -1,4 +1,4 @@
-# Finance Tracker
+# ExpenseFlow
 
 A sleek, mobile-friendly, and cloud-synced personal finance management web application. Built with vanilla web technologies and powered by Firebase, this app helps you keep track of your daily expenses, income, and cash flow seamlessly across all your devices.
 

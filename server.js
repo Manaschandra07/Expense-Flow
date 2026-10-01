@@ -33,5 +33,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, HOST, () => {
-  console.log(`Finance Tracker server running on http://${HOST}:${PORT}`);
+  console.log(`ExpenseFlow server running on http://${HOST}:${PORT}`);
 });
