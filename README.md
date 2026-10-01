@@ -2,6 +2,8 @@
 
 A sleek, mobile-friendly, and cloud-synced personal finance management web application. Built with vanilla web technologies and powered by Firebase, this app helps you keep track of your daily expenses, income, and cash flow seamlessly across all your devices.
 
+**Live Application:** [https://expense-flow-108.vercel.app/](https://expense-flow-108.vercel.app/)
+
 ## Features
 
 * **Cloud Syncing & Authentication:** Secure login via Google or a temporary Guest mode. Your data is synced in real-time using Firebase Firestore.

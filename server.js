@@ -32,6 +32,10 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`ExpenseFlow server running on http://${HOST}:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, HOST, () => {
+    console.log(`ExpenseFlow server running on http://${HOST}:${PORT}`);
+  });
+}
+
+export default app;

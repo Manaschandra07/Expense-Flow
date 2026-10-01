@@ -7,6 +7,8 @@
     <meta name="description" content="A sleek, mobile-friendly personal finance tracker with cloud sync, income and expense analytics, custom categories, and cash summaries.">
     <meta property="og:title" content="ExpenseFlow">
     <meta property="og:description" content="A sleek, mobile-friendly personal finance tracker with cloud sync, income and expense analytics, custom categories, and cash summaries.">
+    <meta property="og:url" content="https://expense-flow-108.vercel.app/">
+    <link rel="canonical" href="https://expense-flow-108.vercel.app/">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ExpenseFlow">
@@ -123,6 +125,47 @@
         }
         .profile-dropdown.active { display: block; animation: fadeIn 0.2s ease; }
         .dropdown-email { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px; display: block; }
+        .profile-dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 10px 0;
+        }
+        .profile-dropdown-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 2px;
+        }
+        .dropdown-action-btn {
+            background: rgba(30,96,145,0.16);
+            border: 1px solid var(--border-hi);
+            color: var(--text-main);
+            padding: 9px 12px;
+            border-radius: 9px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            width: 100%;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        .dropdown-action-btn:hover {
+            background: rgba(42,132,196,0.3);
+            border-color: var(--primary-hi);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        .dropdown-action-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            color: var(--primary-hi);
+        }
         .logout-btn {
             background: var(--expense); color: white; border: none;
             padding: 8px 15px; border-radius: 8px; width: 100%;
@@ -317,10 +360,31 @@
                 <div id="backup-reminder" class="backup-status">Cloud Synced</div>
             </div>
             <div class="profile-container">
-                <img id="user-photo" class="profile-avatar" src="" onclick="toggleProfile()">
+                <img id="user-photo" class="profile-avatar" src="" onclick="toggleProfile()" alt="Profile">
                 <div id="profile-menu" class="profile-dropdown">
                     <div id="user-name" style="font-weight:700;font-size:0.9rem;"></div>
                     <span id="user-email" class="dropdown-email"></span>
+                    <div class="profile-dropdown-divider"></div>
+                    <div class="profile-dropdown-actions">
+                        <button type="button" class="dropdown-action-btn" onclick="downloadCSV()">
+                            <svg class="dropdown-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>Export</span>
+                        </button>
+                        <button type="button" class="dropdown-action-btn" onclick="triggerBulkImport()">
+                            <svg class="dropdown-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <span>Import</span>
+                        </button>
+                        <input type="file" id="bulk-import-file" style="display:none" accept=".csv,text/csv" onchange="handleBulkImport(this)">
+                    </div>
+                    <div class="profile-dropdown-divider"></div>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
             </div>
@@ -394,11 +458,6 @@
                     </div>
                     <div class="table-wrapper">
                     <table id="tx-table"><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th class="col-category">Category</th></tr></thead><tbody id="tx-list"></tbody></table>
-                    </div>
-                    <div class="admin-tools">
-                        <button class="btn-outline" onclick="exportCSV()">Export Backup (.csv)</button>
-                        <button class="btn-outline" onclick="document.getElementById('import-file').click()">Import Backup</button>
-                        <input type="file" id="import-file" style="display:none" accept=".csv" onchange="importCSV(this)">
                     </div>
                 </div>
                 <div class="panel">
@@ -1194,45 +1253,259 @@
         });
     }
 
-    // --- CSV ---
-    function exportCSV() {
-        let csv = "Date,Description,Category,Amount,Type,Mode\n";
+    // --- CSV BULK IMPORT & DOWNLOAD ---
+    function downloadCSV() {
+        const menu = document.getElementById('profile-menu');
+        if (menu && menu.classList.contains('active')) {
+            menu.classList.remove('active');
+        }
+
+        if (!entries || entries.length === 0) {
+            showToast("No transaction records to export");
+            return;
+        }
+
+        const headers = ["Date", "Description", "Category", "Amount", "Type", "Mode"];
+        const csvRows = [headers.join(",")];
+
         entries.forEach(e => {
-            csv += `${e.date},${e.desc},${e.category||''},${e.amount},${e.type},${e.mode||'online'}\n`;
+            const dateVal = (e.date || '').replace(/"/g, '""');
+            const descVal = (e.desc || '').replace(/"/g, '""');
+            const catVal = (e.category || '').replace(/"/g, '""');
+            const amtVal = parseFloat(e.amount || 0).toFixed(2);
+            const typeVal = (resolveType(e) || 'expense').replace(/"/g, '""');
+            const modeVal = (getMode(e) || 'online').replace(/"/g, '""');
+
+            csvRows.push(`"${dateVal}","${descVal}","${catVal}",${amtVal},"${typeVal}","${modeVal}"`);
         });
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(blob);
-        a.download = `finance_backup.csv`;
-        a.click();
+
+        const csvString = "\uFEFF" + csvRows.join("\r\n");
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const today = new Date().toISOString().slice(0, 10);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `ExpenseFlow_Transactions_${today}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast(`Downloaded ${entries.length} transactions as CSV`);
     }
 
-    function importCSV(input) {
-        const reader = new FileReader();
-        reader.onload = function() {
-            const rows = reader.result.split('\n').slice(1);
-            const user = auth.currentUser;
-            const writePromises = rows.filter(row => row.trim()).map(async row => {
-                const fields = row.split(',');
-                let date, desc, category, amount, type, mode;
-                if (fields.length >= 6) {
-                    [date, desc, category, amount, type, mode] = fields;
-                } else if (fields.length === 5) {
-                    [date, desc, category, amount, type] = fields; mode = 'online';
-                } else {
-                    [date, desc, amount, type] = fields; category = ''; mode = 'online';
-                }
-                return db.collection("finance_data").add({
-                    uid: user.uid, ts: Date.now(), date, desc, category,
-                    amount: parseFloat(amount), type: type.trim(), mode: (mode||'online').trim()
-                });
-            });
-            Promise.all(writePromises)
-                .then(() => showToast("Import Complete!"))
-                .catch(err => showToast("Import Error: " + err.message));
-        };
-        reader.readAsText(input.files[0]);
+    function triggerBulkImport() {
+        const fileInput = document.getElementById('bulk-import-file');
+        if (fileInput) fileInput.click();
     }
+
+    function handleBulkImport(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+                if (lines.length === 0) {
+                    showToast("The selected CSV file is empty");
+                    input.value = '';
+                    return;
+                }
+
+                // CSV line splitter supporting quoted values and commas
+                function parseLine(line) {
+                    const result = [];
+                    let cur = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const ch = line[i];
+                        if (ch === '"') {
+                            if (inQuotes && line[i + 1] === '"') {
+                                cur += '"';
+                                i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else if (ch === ',' && !inQuotes) {
+                            result.push(cur.trim());
+                            cur = '';
+                        } else {
+                            cur += ch;
+                        }
+                    }
+                    result.push(cur.trim());
+                    return result.map(s => s.replace(/^"|"$/g, '').trim());
+                }
+
+                const firstLineCols = parseLine(lines[0]);
+                let hasHeader = false;
+                let dateIdx = -1, descIdx = -1, catIdx = -1, amtIdx = -1, typeIdx = -1, modeIdx = -1;
+
+                firstLineCols.forEach((col, idx) => {
+                    const clean = col.toLowerCase().replace(/[^a-z]/g, '');
+                    if (clean.includes('date')) { dateIdx = idx; hasHeader = true; }
+                    else if (clean.includes('desc') || clean.includes('title') || clean.includes('item') || clean.includes('name')) { descIdx = idx; hasHeader = true; }
+                    else if (clean.includes('cat')) { catIdx = idx; hasHeader = true; }
+                    else if (clean.includes('amount') || clean.includes('cost') || clean.includes('price') || clean.includes('val')) { amtIdx = idx; hasHeader = true; }
+                    else if (clean.includes('type')) { typeIdx = idx; hasHeader = true; }
+                    else if (clean.includes('mode') || clean.includes('pay') || clean.includes('method')) { modeIdx = idx; hasHeader = true; }
+                });
+
+                if (!hasHeader || dateIdx === -1 || amtIdx === -1) {
+                    dateIdx = 0;
+                    descIdx = 1;
+                    catIdx = 2;
+                    amtIdx = 3;
+                    typeIdx = 4;
+                    modeIdx = 5;
+                }
+
+                const startIndex = hasHeader ? 1 : 0;
+                const parsedList = [];
+                const newCategories = new Set();
+                const today = new Date().toISOString().slice(0, 10);
+
+                for (let i = startIndex; i < lines.length; i++) {
+                    const cols = parseLine(lines[i]);
+                    if (cols.length === 0 || (cols.length === 1 && !cols[0])) continue;
+
+                    // Date parsing
+                    let rawDate = dateIdx >= 0 && cols[dateIdx] ? cols[dateIdx] : today;
+                    let normDate = today;
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+                        normDate = rawDate;
+                    } else if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(rawDate)) {
+                        const parts = rawDate.split(/[-\/]/);
+                        normDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    } else {
+                        const testDate = new Date(rawDate);
+                        if (!isNaN(testDate.getTime())) {
+                            normDate = testDate.toISOString().slice(0, 10);
+                        }
+                    }
+
+                    // Description
+                    const desc = descIdx >= 0 && cols[descIdx] ? cols[descIdx] : 'Bulk Item';
+
+                    // Category
+                    let category = catIdx >= 0 && cols[catIdx] ? cols[catIdx] : 'Food';
+                    if (!category) category = 'Food';
+                    if (!['Food', 'Entertainment', 'Loan', 'Friends'].includes(category)) {
+                        newCategories.add(category);
+                    }
+
+                    // Amount
+                    let cleanAmt = amtIdx >= 0 && cols[amtIdx] ? cols[amtIdx].replace(/[^0-9.-]/g, '') : '0';
+                    let amount = parseFloat(cleanAmt);
+                    if (isNaN(amount) || amount === 0) continue;
+
+                    // Type
+                    let rawType = typeIdx >= 0 && cols[typeIdx] ? cols[typeIdx].toLowerCase() : '';
+                    let type = 'expense';
+                    if (rawType.includes('income') || rawType === '+' || rawType.includes('credit')) type = 'income';
+                    else if (rawType.includes('pos')) type = 'normalpos';
+                    else if (rawType.includes('neg')) type = 'normalneg';
+                    else type = 'expense';
+
+                    // Mode
+                    let rawMode = modeIdx >= 0 && cols[modeIdx] ? cols[modeIdx].toLowerCase() : 'online';
+                    let mode = rawMode.includes('cash') ? 'cash' : 'online';
+
+                    parsedList.push({
+                        date: normDate,
+                        desc: desc,
+                        category: category,
+                        amount: Math.abs(amount),
+                        type: type,
+                        mode: mode
+                    });
+                }
+
+                if (parsedList.length === 0) {
+                    showToast("No valid transactions found in CSV file");
+                    input.value = '';
+                    return;
+                }
+
+                // Add any new categories discovered in CSV
+                newCategories.forEach(cat => {
+                    if (!customCategories.includes(cat)) {
+                        customCategories.push(cat);
+                    }
+                });
+                localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
+
+                const user = auth.currentUser;
+                showToast(`Importing ${parsedList.length} transactions...`);
+
+                if (isLocalGuest || !user) {
+                    parsedList.forEach((entry, idx) => {
+                        entries.unshift({
+                            id: 'tx_bulk_' + Date.now() + '_' + idx,
+                            uid: user ? user.uid : localUid,
+                            ts: Date.now() + idx,
+                            ...entry
+                        });
+                    });
+                    entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                    localStorage.setItem('finance_data_local', JSON.stringify(entries));
+                    populateCategories();
+                    renderHome();
+                    showToast(`Bulk Import Complete: ${parsedList.length} records added!`);
+                } else {
+                    const batchOps = parsedList.map((entry, idx) => {
+                        return db.collection("finance_data").add({
+                            uid: user.uid,
+                            ts: Date.now() + idx,
+                            ...entry
+                        });
+                    });
+
+                    if (newCategories.size > 0) {
+                        db.collection("user_prefs").doc(user.uid).set({ customCategories }, { merge: true }).catch(e => console.warn(e));
+                    }
+
+                    Promise.all(batchOps)
+                        .then(() => {
+                            populateCategories();
+                            renderHome();
+                            showToast(`Bulk Import Complete: ${parsedList.length} records added!`);
+                        })
+                        .catch(err => {
+                            console.warn("Firestore bulk import error, falling back locally:", err);
+                            parsedList.forEach((entry, idx) => {
+                                entries.unshift({
+                                    id: 'tx_bulk_' + Date.now() + '_' + idx,
+                                    uid: user.uid,
+                                    ts: Date.now() + idx,
+                                    ...entry
+                                });
+                            });
+                            entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                            localStorage.setItem('finance_data_local', JSON.stringify(entries));
+                            populateCategories();
+                            renderHome();
+                            showToast(`Bulk Import Complete: ${parsedList.length} records added!`);
+                        });
+                }
+            } catch (err) {
+                console.error("Bulk Import Error:", err);
+                showToast("Error parsing CSV: " + err.message);
+            } finally {
+                input.value = '';
+                const menu = document.getElementById('profile-menu');
+                if (menu && menu.classList.contains('active')) {
+                    menu.classList.remove('active');
+                }
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // Aliases for compatibility
+    window.exportCSV = downloadCSV;
+    window.importCSV = handleBulkImport;
 </script>
 
 <!-- Custom Modal for Alerts, Confirms, and Prompts -->
