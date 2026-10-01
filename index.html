@@ -16,11 +16,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&text=%E2%82%B9&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&text=%E2%82%B9&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="/firebase-config.js"></script>
     <style>
+        @font-face {
+            font-family: 'RupeeMatched';
+            src: local('JetBrains Mono'), local('Plus Jakarta Sans'), local('Inter'), local('Segoe UI'), local('Roboto');
+            unicode-range: U+20B9;
+            size-adjust: 88%;
+            ascent-override: 88%;
+            descent-override: 0%;
+        }
         html, :root {
             color-scheme: dark;
             --bg:          #060A14;
@@ -41,7 +51,7 @@
         }
         * { box-sizing: border-box; }
         body {
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            font-family: 'RupeeMatched', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
             background-color: var(--bg);
             color: var(--text-main);
             margin: 0; padding: 22px; padding-bottom: 95px;
@@ -97,7 +107,7 @@
             position: fixed; bottom: 0; left: 0; right: 0;
             background: rgba(6, 10, 20, 0.82); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
             display: flex; justify-content: space-around; padding: 10px 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.08); z-index: 1000;
+            border-top: 1px solid rgba(255, 255, 255, 0.08); z-index: 12000;
             box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
         }
         .nav-item {
@@ -448,6 +458,12 @@
             font-weight: 700;
             box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
         }
+        .csp-item-pressing {
+            background: rgba(239, 68, 68, 0.28) !important;
+            color: #FCA5A5 !important;
+            transform: scale(0.97);
+            transition: all 0.2s ease;
+        }
         .csp-optgroup-label {
             font-size: 0.72rem;
             font-weight: 700;
@@ -498,10 +514,18 @@
             margin: 10px 0;
         }
         #view-month {
-            min-width: 185px;
+            width: auto;
+            min-width: 220px;
             font-weight: 600;
-            padding: 10px 14px;
+            padding: 10px 42px 10px 14px;
             font-size: 0.88rem;
+            letter-spacing: 0.01em;
+            line-height: 1.25;
+            box-sizing: border-box;
+        }
+        select#f-category {
+            font-weight: 600;
+            cursor: pointer;
         }
 
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 22px; }
@@ -526,8 +550,18 @@
         }
         .stat-value {
             font-size: 1.85rem; font-weight: 800; margin-top: 10px;
-            font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+            font-family: 'RupeeMatched', 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
             letter-spacing: -0.02em;
+        }
+
+        .rupee-sym {
+            display: inline-block;
+            font-family: inherit;
+            font-size: 0.88em;
+            line-height: 1;
+            vertical-align: 0.02em;
+            margin-right: 0.05em;
+            font-weight: inherit;
         }
 
         /* Monthly Budget Banner */
@@ -541,7 +575,7 @@
         .v2-budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.88rem; }
         .v2-budget-title { font-weight: 700; color: #E2E8F0; letter-spacing: -0.01em; }
         .v2-budget-amount {
-            font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+            font-family: 'RupeeMatched', 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
             color: var(--primary-hi); font-size: 0.9rem; font-weight: 600; cursor: pointer;
             transition: color 0.2s ease;
         }
@@ -696,11 +730,11 @@
             color: white; padding: 3px 9px; border-radius: 8px; margin-right: 10px;
             font-size: 0.76rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
         }
-        .val-income    { color: var(--income); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-        .val-expense   { color: var(--expense); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-        .val-normal    { color: var(--text-main); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-        .val-normalpos { color: var(--income); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-        .val-normalneg { color: var(--expense); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .val-income    { color: var(--income); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
+        .val-expense   { color: var(--expense); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
+        .val-normal    { color: var(--text-main); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
+        .val-normalpos { color: var(--income); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
+        .val-normalneg { color: var(--expense); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
 
         .back-btn {
             background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border);
@@ -723,8 +757,6 @@
             font-family: inherit; font-weight: 600; backdrop-filter: blur(10px);
         }
         .btn-outline:hover { color: var(--text-main); border-color: var(--primary-hi); background: rgba(59, 130, 246, 0.18); }
-        #view-month { width: auto; min-width: 155px; }
-
     </style>
 </head>
 <body>
@@ -791,7 +823,7 @@
                 <div class="v2-budget-info">
                     <div class="v2-budget-header">
                         <span class="v2-budget-title">Monthly Budget</span>
-                        <span id="v2-budget-text" class="v2-budget-amount" onclick="promptSetBudget()" title="Click to adjust monthly budget">₹0 / ₹30,000</span>
+                        <span id="v2-budget-text" class="v2-budget-amount" onclick="promptSetBudget()" title="Click to adjust monthly budget"><span class="rupee-sym">&#8377;</span>0 / <span class="rupee-sym">&#8377;</span>30,000</span>
                     </div>
                     <div class="v2-progress-track">
                         <div id="v2-budget-bar" class="v2-progress-fill" style="width:0%;"></div>
@@ -800,9 +832,9 @@
             </div>
 
             <div class="stats-grid">
-                <div class="stat-card"><div class="stat-label">Monthly Earned</div><div id="m-earned" class="stat-value val-income">&#8377;0.00</div></div>
-                <div class="stat-card"><div class="stat-label">Monthly Spent</div><div id="m-spent" class="stat-value val-expense">&#8377;0.00</div></div>
-                <div class="stat-card"><div class="stat-label">Monthly Net</div><div id="m-net" class="stat-value">&#8377;0.00</div></div>
+                <div class="stat-card"><div class="stat-label">Monthly Earned</div><div id="m-earned" class="stat-value val-income"><span class="rupee-sym">&#8377;</span>0.00</div></div>
+                <div class="stat-card"><div class="stat-label">Monthly Spent</div><div id="m-spent" class="stat-value val-expense"><span class="rupee-sym">&#8377;</span>0.00</div></div>
+                <div class="stat-card"><div class="stat-label">Monthly Net</div><div id="m-net" class="stat-value"><span class="rupee-sym">&#8377;</span>0.00</div></div>
             </div>
 
             <button class="cash-toggle-btn" id="cash-toggle-btn" onclick="toggleCashStats()">&#9656; Show Cash Summary</button>
@@ -810,9 +842,9 @@
             <div class="cash-stats-section" id="cash-stats-section">
                 <div class="cash-section-label">Cash Summary</div>
                 <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-label">Cash Earned</div><div id="c-earned" class="stat-value val-income">&#8377;0.00</div></div>
-                    <div class="stat-card"><div class="stat-label">Cash Spent</div><div id="c-spent" class="stat-value val-expense">&#8377;0.00</div></div>
-                    <div class="stat-card"><div class="stat-label">Cash Net</div><div id="c-net" class="stat-value">&#8377;0.00</div></div>
+                    <div class="stat-card"><div class="stat-label">Cash Earned</div><div id="c-earned" class="stat-value val-income"><span class="rupee-sym">&#8377;</span>0.00</div></div>
+                    <div class="stat-card"><div class="stat-label">Cash Spent</div><div id="c-spent" class="stat-value val-expense"><span class="rupee-sym">&#8377;</span>0.00</div></div>
+                    <div class="stat-card"><div class="stat-label">Cash Net</div><div id="c-net" class="stat-value"><span class="rupee-sym">&#8377;</span>0.00</div></div>
                 </div>
             </div>
 
@@ -820,7 +852,7 @@
                 <form id="finance-form" class="form-row">
                     <div class="input-group"><label>Date</label><input type="date" id="f-date" required></div>
                     <div class="input-group"><label>Description</label><input type="text" id="f-desc" placeholder="e.g. Salary, Rent" required></div>
-                    <div class="input-group"><label>Amount (&#8377;)</label><input type="number" step="0.01" id="f-amount" placeholder="0.00" required></div>
+                    <div class="input-group"><label>Amount (<span class="rupee-sym">&#8377;</span>)</label><input type="number" step="0.01" id="f-amount" placeholder="0.00" required></div>
                     <div class="input-group"><label>Type</label>
                         <select id="f-type">
                             <option value="expense">Expense (-)</option>
@@ -960,7 +992,7 @@
                         getUserPrefsRef(user.uid).set({ monthlyBudget: num, updatedAt: Date.now() }, { merge: true }).catch(() => {});
                     }
                     renderHome();
-                    showToast(`Budget target updated to ${formatINR(num)}`);
+                    showToast(`Budget target updated to ${formatINR(num, false)}`);
                 }
             }
         });
@@ -1325,18 +1357,46 @@
         }
     }
 
-    function populateCategories() {
+    const DEFAULT_CATEGORIES = [
+        'Food',
+        'Transport',
+        'Shopping',
+        'Entertainment',
+        'Bills',
+        'Fitness/Health',
+        'Salary / Freelance',
+        'Others'
+    ];
+
+    function populateCategories(forceFirst = false) {
         const select = document.getElementById('f-category');
-        select.innerHTML = `
-            <option value="Food">Food</option>
-            <option value="Entertainment">Entertainment</option>
-            <option value="Loan">Loan</option>
-            <option value="Friends">Friends</option>
-        `;
-        customCategories.forEach(cat => {
-            select.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`);
+        if (!select) return;
+        const prevValue = forceFirst ? null : select.value;
+
+        // Base regular categories (all default categories except 'Others')
+        const regularDefaults = DEFAULT_CATEGORIES.filter(c => c !== 'Others');
+        // Combine with customCategories and sort alphabetically
+        const sortedCategories = Array.from(new Set([...regularDefaults, ...customCategories]))
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+        let html = '';
+        sortedCategories.forEach(cat => {
+            html += `<option value="${cat}">${cat}</option>`;
         });
-        select.insertAdjacentHTML('beforeend', `<option value="Custom">Custom...</option>`);
+        // Keep the Others category above custom category
+        html += `<option value="Others">Others</option>`;
+        // Custom categories in dropdown which is at the bottom
+        html += `<option value="Custom">Custom Categories...</option>`;
+        select.innerHTML = html;
+
+        // Keep first category as default selected category
+        const firstCategory = sortedCategories[0] || 'Bills';
+        if (!forceFirst && prevValue && (sortedCategories.includes(prevValue) || prevValue === 'Others' || prevValue === 'Custom')) {
+            select.value = prevValue;
+        } else {
+            select.value = firstCategory;
+        }
+
         select.removeEventListener('mousedown', startPressTimer);
         select.removeEventListener('mouseup', clearPressTimer);
         select.removeEventListener('mouseleave', clearPressTimer);
@@ -1352,21 +1412,59 @@
     }
 
     function triggerCategoryDeletion(val) {
+        if (!val || val === 'Custom') return false;
+        if (DEFAULT_CATEGORIES.includes(val)) {
+            showToast("Default categories cannot be deleted.");
+            return false;
+        }
         if (customCategories.includes(val)) {
+            const txCount = entries.filter(e => e.category === val).length;
+            const detailMsg = txCount > 0 
+                ? ` All ${txCount} transaction(s) in this category will be moved to "Others".` 
+                : "";
             showCustomModal({
                 title: "Delete Category",
-                message: `Do you want to completely delete the custom category "${val}"?`,
+                message: `Are you sure you want to delete the custom category "${val}"?${detailMsg}`,
                 onOk: () => {
+                    // Move all transactions in that category to Others Category
+                    let movedCount = 0;
+                    entries.forEach(e => {
+                        if (e.category === val) {
+                            e.category = 'Others';
+                            movedCount++;
+                        }
+                    });
+
+                    // Remove from customCategories
                     customCategories = customCategories.filter(cat => cat !== val);
+
+                    // Sync preferences & updated transactions
                     const user = auth.currentUser;
                     if (user && !isLocalGuest) {
                         getUserPrefsRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
                         getUserDocRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
+
+                        if (movedCount > 0) {
+                            getUserTransactionsRef(user.uid).where("category", "==", val).get().then(snap => {
+                                if (!snap.empty) {
+                                    const batch = db.batch();
+                                    snap.docs.forEach(doc => {
+                                        batch.update(doc.ref, { category: 'Others' });
+                                    });
+                                    batch.commit().catch(err => console.warn("Firestore batch move error:", err));
+                                }
+                            }).catch(err => console.warn(err));
+                        }
                     }
+
+                    localStorage.setItem('finance_data_local', JSON.stringify(entries));
                     localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
-                    populateCategories();
-                    document.getElementById('f-category').value = 'Food';
-                    showToast(`Deleted category "${val}"`);
+
+                    populateCategories(true);
+                    renderHome();
+                    showToast(movedCount > 0 
+                        ? `Deleted "${val}" and moved ${movedCount} transaction(s) to Others.` 
+                        : `Deleted category "${val}".`);
                 },
                 onCancel: () => {}
             });
@@ -1377,15 +1475,21 @@
     function startPressTimer(e) {
         clearPressTimer();
         const selectedValue = document.getElementById('f-category').value;
-        longPressTimer = setTimeout(() => { triggerCategoryDeletion(selectedValue); }, 1000);
+        if (customCategories.includes(selectedValue)) {
+            longPressTimer = setTimeout(() => { triggerCategoryDeletion(selectedValue); }, 650);
+        }
     }
     function clearPressTimer() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
     function handleRightClickDelete(e) {
         e.preventDefault();
-        triggerCategoryDeletion(document.getElementById('f-category').value);
+        const selectedValue = document.getElementById('f-category').value;
+        if (customCategories.includes(selectedValue)) {
+            triggerCategoryDeletion(selectedValue);
+        }
     }
 
     function handleCategorySelection(selectEl) {
+        const firstCat = selectEl.options[0] ? selectEl.options[0].value : 'Bills';
         if (selectEl.value === 'Custom') {
             showCustomModal({
                 title: "New Category",
@@ -1394,27 +1498,36 @@
                 onOk: (newCat) => {
                     if (newCat && newCat.trim() !== '') {
                         const cleanedCat = newCat.trim();
-                        if (!['Food','Entertainment','Loan','Friends','Custom'].includes(cleanedCat) && !customCategories.includes(cleanedCat)) {
-                            customCategories.push(cleanedCat);
-                            const user = auth.currentUser;
-                            if (user && !isLocalGuest) {
-                                getUserPrefsRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
-                                getUserDocRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
-                            }
-                            localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
-                            populateCategories();
-                            selectEl.value = cleanedCat;
-                            showToast(`Category "${cleanedCat}" added`);
-                        } else {
-                            showToast("Category name already exists or is invalid.");
-                            selectEl.value = 'Food';
+                        const isDefault = DEFAULT_CATEGORIES.some(c => c.toLowerCase() === cleanedCat.toLowerCase()) || cleanedCat.toLowerCase() === 'custom';
+                        const isExisting = customCategories.some(c => c.toLowerCase() === cleanedCat.toLowerCase());
+
+                        if (isDefault) {
+                            showToast(`"${cleanedCat}" is a default category.`);
+                            selectEl.value = firstCat;
+                            return;
                         }
+                        if (isExisting) {
+                            showToast(`Category "${cleanedCat}" already exists.`);
+                            selectEl.value = customCategories.find(c => c.toLowerCase() === cleanedCat.toLowerCase()) || firstCat;
+                            return;
+                        }
+
+                        customCategories.push(cleanedCat);
+                        const user = auth.currentUser;
+                        if (user && !isLocalGuest) {
+                            getUserPrefsRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
+                            getUserDocRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
+                        }
+                        localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
+                        populateCategories();
+                        selectEl.value = cleanedCat;
+                        showToast(`Category "${cleanedCat}" added`);
                     } else {
-                        selectEl.value = 'Food';
+                        selectEl.value = firstCat;
                     }
                 },
                 onCancel: () => {
-                    selectEl.value = 'Food';
+                    selectEl.value = firstCat;
                 }
             });
         }
@@ -1570,7 +1683,14 @@
     document.getElementById('view-month').value = new Date().toISOString().slice(0,7);
     document.getElementById('f-date').valueAsDate = new Date();
 
-    function formatINR(amt) { return '\u20B9' + parseFloat(amt).toLocaleString('en-IN', { minimumFractionDigits: 2 }); }
+    function formatINR(amt, asHtml = true) {
+        const val = parseFloat(amt || 0);
+        const formatted = isNaN(val) ? '0.00' : val.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        if (asHtml) {
+            return `<span class="rupee-sym">&#8377;</span>${formatted}`;
+        }
+        return '\u20B9' + formatted;
+    }
     function prettyDate(d)  { const [y,m,day] = d.split('-'); return `${day}-${m}-${y}`; }
 
     // Resolve type: old "normal" entries treated as normalneg
@@ -1731,16 +1851,16 @@
         }
 
         // Update Monthly & Cash stats
-        document.getElementById('m-earned').innerText = formatINR(tIn);
-        document.getElementById('m-spent').innerText  = formatINR(tOut);
+        document.getElementById('m-earned').innerHTML = formatINR(tIn);
+        document.getElementById('m-spent').innerHTML  = formatINR(tOut);
         const netEl = document.getElementById('m-net');
-        netEl.innerText   = formatINR(netBalance);
+        netEl.innerHTML   = formatINR(netBalance);
         netEl.className   = 'stat-value ' + (netBalance >= 0 ? 'val-income' : 'val-expense');
 
-        document.getElementById('c-earned').innerText = formatINR(cIn);
-        document.getElementById('c-spent').innerText  = formatINR(cOut);
+        document.getElementById('c-earned').innerHTML = formatINR(cIn);
+        document.getElementById('c-spent').innerHTML  = formatINR(cOut);
         const cNetEl = document.getElementById('c-net');
-        cNetEl.innerText = formatINR(cNet);
+        cNetEl.innerHTML = formatINR(cNet);
         cNetEl.className = 'stat-value ' + (cNet >= 0 ? 'val-income' : 'val-expense');
 
         // Update V2.0 Insights & Budget Bar
@@ -1749,7 +1869,7 @@
         const budgetPercent = Math.min(100, Math.round((totalSpent / monthlyBudget) * 100));
         const budgetTextEl = document.getElementById('v2-budget-text');
         const budgetBarEl = document.getElementById('v2-budget-bar');
-        if (budgetTextEl) budgetTextEl.innerText = `${formatINR(totalSpent)} / ${formatINR(monthlyBudget)}`;
+        if (budgetTextEl) budgetTextEl.innerHTML = `${formatINR(totalSpent)} / ${formatINR(monthlyBudget)}`;
         if (budgetBarEl) {
             budgetBarEl.style.width = `${budgetPercent}%`;
             if (budgetPercent >= 90) {
@@ -2083,7 +2203,7 @@
                     // Category
                     let category = catIdx >= 0 && cols[catIdx] ? cols[catIdx] : 'Food';
                     if (!category) category = 'Food';
-                    if (!['Food', 'Entertainment', 'Loan', 'Friends'].includes(category)) {
+                    if (!DEFAULT_CATEGORIES.includes(category)) {
                         newCategories.add(category);
                     }
 
@@ -2230,13 +2350,26 @@
             const popupWidth = popup.offsetWidth || 280;
 
             let left = rect.left + window.scrollX;
-            // Always position directly down below the input button
-            let top = rect.bottom + window.scrollY + 6;
-
             if (left + popupWidth > window.innerWidth - 12) {
                 left = window.innerWidth - popupWidth - 12;
             }
             if (left < 12) left = 12;
+
+            const navEl = document.getElementById('app-nav');
+            const navVisible = navEl && navEl.style.display !== 'none';
+            const navHeight = navVisible ? (navEl.offsetHeight || 64) : 0;
+            const bottomNavBoundary = window.innerHeight - navHeight;
+
+            const spaceBelow = bottomNavBoundary - rect.bottom - 10;
+            const spaceAbove = rect.top - 10;
+            const popupHeight = popup.offsetHeight || 300;
+
+            let top;
+            if (spaceBelow < popupHeight && spaceAbove > spaceBelow) {
+                top = rect.top + window.scrollY - popupHeight - 6;
+            } else {
+                top = rect.bottom + window.scrollY + 6;
+            }
 
             popup.style.left = `${left}px`;
             popup.style.top = `${top}px`;
@@ -2527,13 +2660,33 @@
 
             const popupWidth = popup.offsetWidth || minWidth;
             let left = rect.left + window.scrollX;
-            // Always position directly down below the select button
-            let top = rect.bottom + window.scrollY + 6;
 
             if (left + popupWidth > window.innerWidth - 12) {
                 left = window.innerWidth - popupWidth - 12;
             }
             if (left < 12) left = 12;
+
+            const navEl = document.getElementById('app-nav');
+            const navVisible = navEl && navEl.style.display !== 'none';
+            const navHeight = navVisible ? (navEl.offsetHeight || 64) : 0;
+            const bottomNavBoundary = window.innerHeight - navHeight;
+
+            // Space below the select button before the bottom nav bar
+            const spaceBelow = bottomNavBoundary - rect.bottom - 10;
+            const spaceAbove = rect.top - 10;
+
+            let top;
+            // If space below is constrained and space above is larger, flip upwards
+            if (spaceBelow < 170 && spaceAbove > spaceBelow) {
+                const maxH = Math.min(280, Math.max(120, spaceAbove - 10));
+                popup.style.maxHeight = `${maxH}px`;
+                const popupHeight = popup.offsetHeight || 190;
+                top = rect.top + window.scrollY - popupHeight - 6;
+            } else {
+                const maxH = Math.min(280, Math.max(100, spaceBelow - 4));
+                popup.style.maxHeight = `${maxH}px`;
+                top = rect.bottom + window.scrollY + 6;
+            }
 
             popup.style.left = `${left}px`;
             popup.style.top = `${top}px`;
@@ -2551,6 +2704,7 @@
             const popup = getOrCreateSelectPopup();
             const curVal = select.value;
             let itemsHtml = '';
+            const isCategorySelect = (select.id === 'f-category');
 
             Array.from(select.children).forEach(child => {
                 if (child.tagName === 'OPTGROUP') {
@@ -2568,9 +2722,62 @@
             popup.innerHTML = itemsHtml;
 
             popup.querySelectorAll('.csp-item').forEach(item => {
+                const val = item.getAttribute('data-value');
+                const isCustomCat = isCategorySelect && customCategories.includes(val);
+
+                let pressTimer = null;
+                let didLongPress = false;
+
+                const cancelPress = () => {
+                    if (pressTimer) {
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }
+                    item.classList.remove('csp-item-pressing');
+                };
+
+                const startPress = () => {
+                    didLongPress = false;
+                    cancelPress();
+                    item.classList.add('csp-item-pressing');
+                    pressTimer = setTimeout(() => {
+                        didLongPress = true;
+                        cancelPress();
+                        if (typeof window.closeAllDropdowns === 'function') window.closeAllDropdowns();
+                        else closeSelectPopup();
+                        triggerCategoryDeletion(val);
+                    }, 650);
+                };
+
+                if (isCustomCat) {
+                    item.title = "Long press to delete custom category";
+                    item.addEventListener('mousedown', (e) => {
+                        if (e.button === 0) startPress();
+                    });
+                    item.addEventListener('touchstart', () => {
+                        startPress();
+                    }, { passive: true });
+                    item.addEventListener('mouseup', cancelPress);
+                    item.addEventListener('mouseleave', cancelPress);
+                    item.addEventListener('touchend', cancelPress);
+                    item.addEventListener('touchcancel', cancelPress);
+
+                    item.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        cancelPress();
+                        if (typeof window.closeAllDropdowns === 'function') window.closeAllDropdowns();
+                        else closeSelectPopup();
+                        triggerCategoryDeletion(val);
+                    });
+                }
+
                 item.onclick = (e) => {
                     e.stopPropagation();
-                    const val = item.getAttribute('data-value');
+                    if (didLongPress) {
+                        didLongPress = false;
+                        return;
+                    }
                     select.value = val;
                     select.dispatchEvent(new Event('input', { bubbles: true }));
                     select.dispatchEvent(new Event('change', { bubbles: true }));
