@@ -1391,20 +1391,74 @@
             return;
         }
 
-        const headers = ["Date", "Description", "Category", "Amount", "Type", "Mode"];
-        const csvRows = [headers.join(",")];
+        // Pristine, readable column headers
+        const headers = [
+            "Date",
+            "Description",
+            "Category",
+            "Payment Mode",
+            "Type",
+            "Cash Flow",
+            "Amount (INR)",
+            "Net Impact (INR)"
+        ];
+        const csvRows = [headers.map(h => `"${h}"`).join(",")];
 
-        entries.forEach(e => {
+        // Compute summary metrics for summary section
+        let totalOutflow = 0;
+        let totalInflow = 0;
+
+        // Process sorted records
+        const sortedEntries = [...entries].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        sortedEntries.forEach(e => {
             const dateVal = (e.date || '').replace(/"/g, '""');
             const descVal = (e.desc || '').replace(/"/g, '""');
-            const catVal = (e.category || '').replace(/"/g, '""');
-            const amtVal = parseFloat(e.amount || 0).toFixed(2);
-            const typeVal = (resolveType(e) || 'expense').replace(/"/g, '""');
-            const modeVal = (getMode(e) || 'online').replace(/"/g, '""');
+            const catVal = (e.category || 'Food').replace(/"/g, '""');
+            const modeVal = getMode(e) === 'cash' ? 'Cash' : 'Online';
+            const t = resolveType(e);
 
-            csvRows.push(`"${dateVal}","${descVal}","${catVal}",${amtVal},"${typeVal}","${modeVal}"`);
+            let typeLabel = "Expense";
+            let flowLabel = "Outflow";
+            let amt = parseFloat(e.amount || 0);
+            if (isNaN(amt)) amt = 0;
+            let signedAmt = -Math.abs(amt);
+
+            if (t === 'income') {
+                typeLabel = "Income";
+                flowLabel = "Inflow";
+                signedAmt = Math.abs(amt);
+                totalInflow += amt;
+            } else if (t === 'normalpos') {
+                typeLabel = "Normal (Credit)";
+                flowLabel = "Inflow";
+                signedAmt = Math.abs(amt);
+                totalInflow += amt;
+            } else if (t === 'normalneg') {
+                typeLabel = "Normal (Debit)";
+                flowLabel = "Outflow";
+                signedAmt = -Math.abs(amt);
+                totalOutflow += amt;
+            } else {
+                totalOutflow += amt;
+            }
+
+            const amtVal = amt.toFixed(2);
+            const signedVal = (signedAmt >= 0 ? '+' : '') + signedAmt.toFixed(2);
+
+            csvRows.push(`"${dateVal}","${descVal}","${catVal}","${modeVal}","${typeLabel}","${flowLabel}",${amtVal},${signedVal}`);
         });
 
+        // Add summary block at the bottom
+        const netBalance = totalInflow - totalOutflow;
+        csvRows.push("");
+        csvRows.push(`"--- SUMMARY STATISTICS ---","","","","","","",""`);
+        csvRows.push(`"Total Records","${sortedEntries.length} transactions","","","","","",""`);
+        csvRows.push(`"Total Inflow (Income & Credits)","","","","","Inflow",${totalInflow.toFixed(2)},+${totalInflow.toFixed(2)}`);
+        csvRows.push(`"Total Outflow (Expenses & Debits)","","","","","Outflow",${totalOutflow.toFixed(2)},-${totalOutflow.toFixed(2)}`);
+        csvRows.push(`"Net Balance","","","","","${netBalance >= 0 ? 'Surplus' : 'Deficit'}",${Math.abs(netBalance).toFixed(2)},${netBalance >= 0 ? '+' : ''}${netBalance.toFixed(2)}`);
+
+        // UTF-8 BOM ensures Excel & Google Sheets open special characters and formatting flawlessly
         const csvString = "\uFEFF" + csvRows.join("\r\n");
         const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -1416,7 +1470,7 @@
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        showToast(`Downloaded ${entries.length} transactions as CSV`);
+        showToast(`Exported ${entries.length} transactions cleanly to CSV`);
     }
 
     function triggerBulkImport() {
@@ -1432,7 +1486,10 @@
         reader.onload = async function(e) {
             try {
                 const text = e.target.result;
-                const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+                const lines = text.split(/\r?\n/).filter(line => {
+                    const t = line.trim();
+                    return t.length > 0 && !t.startsWith('#') && !t.startsWith('---');
+                });
                 if (lines.length === 0) {
                     showToast("The selected CSV file is empty");
                     input.value = '';
@@ -1495,6 +1552,8 @@
                 for (let i = startIndex; i < lines.length; i++) {
                     const cols = parseLine(lines[i]);
                     if (cols.length === 0 || (cols.length === 1 && !cols[0])) continue;
+                    // Ignore summary / footer rows
+                    if (cols[0] && (cols[0].toUpperCase().includes('SUMMARY') || cols[0].toUpperCase().includes('TOTAL') || cols[0].toUpperCase().includes('NET BALANCE'))) continue;
 
                     // Date parsing
                     let rawDate = dateIdx >= 0 && cols[dateIdx] ? cols[dateIdx] : today;
@@ -1531,7 +1590,7 @@
                     let type = 'expense';
                     if (rawType.includes('income') || rawType === '+' || rawType.includes('credit')) type = 'income';
                     else if (rawType.includes('pos')) type = 'normalpos';
-                    else if (rawType.includes('neg')) type = 'normalneg';
+                    else if (rawType.includes('neg') || rawType.includes('debit')) type = 'normalneg';
                     else type = 'expense';
 
                     // Mode
