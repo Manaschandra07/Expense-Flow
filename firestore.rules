@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny for unhandled paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Legacy collections support during migration
+    match /finance_data/{docId} {
+      allow read, write, delete: if request.auth != null && (resource == null || resource.data.uid == request.auth.uid);
+    }
+    match /user_prefs/{userId} {
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Segregated User Collections
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /transactions/{transactionId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /preferences/{prefId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

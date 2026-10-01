@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile and top-level user preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "customCategories": {
+          "type": "array",
+          "description": "List of user-defined custom categories"
+        },
+        "updatedAt": { "type": "number", "description": "Timestamp of last modification" }
+      },
+      "required": ["uid"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Individual income, expense, or normal transaction record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner user ID" },
+        "date": { "type": "string", "description": "Date in YYYY-MM-DD format" },
+        "desc": { "type": "string", "description": "Description of the transaction" },
+        "category": { "type": "string", "description": "Category name" },
+        "amount": { "type": "number", "description": "Transaction amount in INR" },
+        "type": { "type": "string", "description": "Transaction type (expense, income, normalneg, normalpos)" },
+        "mode": { "type": "string", "description": "Payment mode (online, cash)" },
+        "ts": { "type": "number", "description": "Unix timestamp in ms" }
+      },
+      "required": ["uid", "date", "desc", "amount", "type"]
+    },
+    "Preference": {
+      "title": "Preference",
+      "description": "User-specific settings and custom categories",
+      "type": "object",
+      "properties": {
+        "customCategories": {
+          "type": "array",
+          "description": "User custom category list"
+        },
+        "updatedAt": { "type": "number", "description": "Timestamp in ms" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Primary user document segregating all data by user ID"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User subcollection containing all personal financial transactions"
+    },
+    "/users/{userId}/preferences/{prefId}": {
+      "schema": "Preference",
+      "description": "User subcollection containing user preferences and custom categories"
+    }
+  }
+}
