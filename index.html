@@ -762,17 +762,6 @@
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
         }
 
-        .row-delete-btn {
-            background: transparent; border: none; color: var(--text-muted);
-            font-size: 1.15rem; line-height: 1; cursor: pointer; padding: 2px 6px;
-            border-radius: 6px; margin-left: 4px; opacity: 0.35;
-            transition: all 0.2s ease; vertical-align: middle; font-family: inherit;
-        }
-        .tx-row:hover .row-delete-btn { opacity: 0.85; }
-        .row-delete-btn:hover {
-            opacity: 1; color: #F43F5E; background: rgba(244, 63, 94, 0.18);
-        }
-
         .analysis-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 30px; margin-top: 15px; }
         @media (max-width: 768px) { .analysis-cat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
         @media (max-width: 480px) { .analysis-cat-grid { grid-template-columns: 1fr; } }
@@ -1651,20 +1640,81 @@
         });
     }
 
+    // --- TRANSACTION OPTIONS & EDIT MODALS ---
+    let currentActionEntryId = null;
+
+    function openTxActionMenu(entryId) {
+        const tx = entries.find(x => x.id === entryId);
+        if (!tx) return;
+        currentActionEntryId = entryId;
+
+        const modal = document.getElementById('tx-action-modal');
+        const summary = document.getElementById('tx-action-summary');
+        const formattedAmt = formatINR(tx.amount);
+        const dateFormatted = prettyDate(tx.date);
+        const categoryText = tx.category || 'Uncategorized';
+        
+        summary.innerHTML = `<span style="color:#FFF;font-weight:600;">${tx.desc || 'No description'}</span> &bull; ${formattedAmt} &bull; ${dateFormatted} &bull; <span style="text-transform:capitalize;">${categoryText}</span>`;
+        modal.style.display = 'flex';
+    }
+
+    function closeTxActionMenu() {
+        const modal = document.getElementById('tx-action-modal');
+        if (modal) modal.style.display = 'none';
+        currentActionEntryId = null;
+    }
+
+    function openTxEditModal(entryId) {
+        const tx = entries.find(x => x.id === entryId);
+        if (!tx) return;
+
+        closeTxActionMenu();
+
+        document.getElementById('edit-tx-id').value = tx.id;
+        document.getElementById('edit-tx-date').value = tx.date;
+        document.getElementById('edit-tx-desc').value = tx.desc || '';
+        document.getElementById('edit-tx-amount').value = tx.amount;
+        document.getElementById('edit-tx-type').value = resolveType(tx);
+        document.getElementById('edit-tx-mode').value = getMode(tx);
+
+        const catSelect = document.getElementById('edit-tx-category');
+        catSelect.innerHTML = '';
+        const allCats = Array.from(new Set([...DEFAULT_CATEGORIES, ...customCategories]));
+        allCats.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            if (cat === tx.category) opt.selected = true;
+            catSelect.appendChild(opt);
+        });
+
+        document.getElementById('tx-edit-modal').style.display = 'flex';
+    }
+
+    function closeTxEditModal() {
+        const modal = document.getElementById('tx-edit-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
     function attachRowLongPress(row, entryId) {
         let timer = null;
+        let isLongPress = false;
+
         const start = (e) => {
-            if (e.target.closest('.editable-cell input, .row-delete-btn')) return;
+            if (e.target.closest('.editable-cell input')) return;
+            isLongPress = false;
             row.classList.add('pressing');
             timer = setTimeout(() => {
+                isLongPress = true;
                 row.classList.remove('pressing');
-                confirmDeleteEntry(entryId);
-            }, 550);
+                openTxActionMenu(entryId);
+            }, 450);
         };
         const cancel = () => {
             if (timer) { clearTimeout(timer); timer = null; }
             row.classList.remove('pressing');
         };
+
         row.addEventListener('mousedown', (e) => {
             if (e.button === 0) start(e);
         });
@@ -1675,11 +1725,18 @@
         row.addEventListener('touchmove', cancel);
         row.addEventListener('touchcancel', cancel);
         row.addEventListener('contextmenu', e => {
-            if (e.target.closest('.editable-cell input, .row-delete-btn')) return;
+            if (e.target.closest('.editable-cell input')) return;
             e.preventDefault();
             cancel();
-            confirmDeleteEntry(entryId);
+            openTxActionMenu(entryId);
         });
+        row.addEventListener('click', (e) => {
+            if (isLongPress) {
+                e.stopPropagation();
+                e.preventDefault();
+                isLongPress = false;
+            }
+        }, true);
     }
 
     // --- CASH TOGGLE ---
@@ -1965,7 +2022,7 @@
                     <td class="col-date">${prettyDate(e.date)}</td>
                     <td class="col-desc editable-cell" onclick="makeEditable(this,'${e.id}','desc',${safeDescJSON})">${e.desc}${cashTag}</td>
                     <td class="col-amount val-${t} editable-cell" onclick="makeEditable(this,'${e.id}','amount')">${prefix}${formatINR(e.amount)}</td>
-                    <td class="col-category"><div style="display:flex;align-items:center;justify-content:space-between;width:100%;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${categoryDisplay}</span><button type="button" class="row-delete-btn" onclick="event.stopPropagation();confirmDeleteEntry('${e.id}')" title="Delete entry" aria-label="Delete entry">&times;</button></div></td>
+                    <td class="col-category">${categoryDisplay}</td>
                 `;
                 
                 attachRowLongPress(row, e.id);
@@ -3062,10 +3119,87 @@
         }
     });
 
+    // --- TRANSACTION ACTION MENU & EDIT MODAL HANDLERS ---
+    document.getElementById('tx-action-edit-btn').addEventListener('click', () => {
+        if (currentActionEntryId) openTxEditModal(currentActionEntryId);
+    });
+
+    document.getElementById('tx-action-delete-btn').addEventListener('click', () => {
+        const entryId = currentActionEntryId;
+        closeTxActionMenu();
+        if (entryId) confirmDeleteEntry(entryId);
+    });
+
+    document.getElementById('tx-action-cancel-btn').addEventListener('click', closeTxActionMenu);
+    document.getElementById('edit-tx-cancel-btn').addEventListener('click', closeTxEditModal);
+
+    // Backdrop click dismissals
+    document.getElementById('tx-action-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'tx-action-modal') closeTxActionMenu();
+    });
+    document.getElementById('tx-edit-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'tx-edit-modal') closeTxEditModal();
+    });
+
+    // Edit form submission
+    document.getElementById('tx-edit-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const entryId = document.getElementById('edit-tx-id').value;
+        const tx = entries.find(x => x.id === entryId);
+        if (!tx) {
+            closeTxEditModal();
+            return;
+        }
+
+        const dateVal = document.getElementById('edit-tx-date').value;
+        const descVal = document.getElementById('edit-tx-desc').value.trim();
+        const amtVal  = parseFloat(document.getElementById('edit-tx-amount').value);
+        const typeVal = document.getElementById('edit-tx-type').value;
+        const catVal  = document.getElementById('edit-tx-category').value;
+        const modeVal = document.getElementById('edit-tx-mode').value;
+
+        if (!descVal || isNaN(amtVal) || amtVal <= 0) {
+            showToast("Please enter a valid description and amount");
+            return;
+        }
+
+        // 1. INSTANT OPTIMISTIC UPDATE
+        tx.date     = dateVal;
+        tx.desc     = descVal;
+        tx.amount   = Math.abs(amtVal);
+        tx.type     = typeVal;
+        tx.category = catVal;
+        tx.mode     = modeVal;
+
+        // Sort so latest date is first
+        entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        // Save locally in 0ms
+        localStorage.setItem('finance_data_local', JSON.stringify(entries));
+        const user = auth.currentUser;
+        if (user) {
+            localStorage.setItem('finance_data_local_' + user.uid, JSON.stringify(entries));
+        }
+
+        // Instant UI update
+        renderHome();
+        closeTxEditModal();
+        showToast("Transaction updated");
+
+        // 2. BACKGROUND FIRESTORE SYNC (Non-blocking)
+        if (user && !isLocalGuest) {
+            getUserTransactionsRef(user.uid).doc(entryId).set({ ...tx }, { merge: true }).catch(err => {
+                console.warn("Firestore update error:", err);
+            });
+        }
+    });
+
     // Close on Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             window.closeAllDropdowns();
+            closeTxActionMenu();
+            closeTxEditModal();
         }
     });
 </script>
@@ -3082,6 +3216,75 @@
             <button id="custom-modal-cancel" class="btn-outline" style="min-width:85px;padding:8px 16px;">Cancel</button>
             <button id="custom-modal-ok" class="add-btn" style="height:42px;padding:0 22px;width:auto;min-width:85px;">OK</button>
         </div>
+    </div>
+</div>
+
+<!-- Transaction Action Menu Modal (Edit or Delete on Long Press) -->
+<div id="tx-action-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(3,6,12,0.85);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:20px;">
+    <div style="background:rgba(11,19,43,0.95);border:1px solid rgba(96,165,250,0.35);border-radius:20px;max-width:380px;width:100%;padding:24px;box-shadow:0 24px 60px rgba(0,0,0,0.85),inset 0 1px 0 rgba(255,255,255,0.18);animation:fadeIn 0.2s ease;">
+        <h3 style="margin-top:0;margin-bottom:6px;color:#FFFFFF;font-size:1.2rem;font-weight:700;">Transaction Options</h3>
+        <p id="tx-action-summary" style="color:var(--text-muted);font-size:0.86rem;margin-bottom:20px;line-height:1.5;"></p>
+        
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+            <button id="tx-action-edit-btn" class="add-btn" style="width:100%;height:44px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:0.95rem;cursor:pointer;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Edit
+            </button>
+            <button id="tx-action-delete-btn" style="width:100%;height:44px;background:rgba(244,63,94,0.15);color:#F43F5E;border:1px solid rgba(244,63,94,0.35);border-radius:12px;font-weight:600;font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s ease;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                Delete
+            </button>
+        </div>
+        <button id="tx-action-cancel-btn" class="btn-outline" style="width:100%;padding:10px;text-align:center;">Cancel</button>
+    </div>
+</div>
+
+<!-- Full Transaction Edit Modal -->
+<div id="tx-edit-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(3,6,12,0.85);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:20px;">
+    <div style="background:rgba(11,19,43,0.96);border:1px solid rgba(96,165,250,0.35);border-radius:20px;max-width:440px;width:100%;padding:26px;box-shadow:0 24px 60px rgba(0,0,0,0.85),inset 0 1px 0 rgba(255,255,255,0.18);animation:fadeIn 0.2s ease;max-height:90vh;overflow-y:auto;">
+        <h3 style="margin-top:0;margin-bottom:6px;color:#FFFFFF;font-size:1.25rem;font-weight:700;">Edit Transaction</h3>
+        <p style="color:var(--text-muted);font-size:0.84rem;margin-bottom:18px;">Update transaction details below</p>
+        
+        <form id="tx-edit-form" style="display:flex;flex-direction:column;gap:14px;">
+            <input type="hidden" id="edit-tx-id">
+            <div class="input-group">
+                <label>Date</label>
+                <input type="date" id="edit-tx-date" required>
+            </div>
+            <div class="input-group">
+                <label>Description</label>
+                <input type="text" id="edit-tx-desc" placeholder="e.g. Salary, Rent" required>
+            </div>
+            <div class="input-group">
+                <label>Amount (<span class="rupee-sym">&#8377;</span>)</label>
+                <input type="number" step="0.01" id="edit-tx-amount" placeholder="0.00" required>
+            </div>
+            <div class="input-group">
+                <label>Type</label>
+                <select id="edit-tx-type">
+                    <option value="expense">Expense (-)</option>
+                    <option value="income">Income (+)</option>
+                    <option value="normalneg">Normal (-)</option>
+                    <option value="normalpos">Normal (+)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Category</label>
+                <select id="edit-tx-category"></select>
+            </div>
+            <div class="input-group">
+                <label>Mode</label>
+                <select id="edit-tx-mode">
+                    <option value="online">Online</option>
+                    <option value="cash">Cash</option>
+                </select>
+            </div>
+            
+            <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
+                <button type="button" id="edit-tx-cancel-btn" class="btn-outline" style="min-width:90px;padding:9px 16px;">Cancel</button>
+                <button type="submit" class="add-btn" style="height:42px;padding:0 22px;width:auto;min-width:120px;">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 <!-- Custom Toast Notification -->
