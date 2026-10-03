@@ -736,37 +736,9 @@
             user-select: none;
         }
 
-        .tx-row {
-            position: relative;
-            transition: background-color 0.15s ease;
-            border-radius: 8px;
-            user-select: none;
-            touch-action: pan-y;
-        }
-        .tx-row td {
-            will-change: transform;
-        }
+        .tx-row { transition: background-color 0.15s ease; border-radius: 8px; }
         .tx-row:hover { background-color: rgba(255, 255, 255, 0.035); }
         .tx-row.pressing { background-color: rgba(244, 63, 94, 0.15); }
-
-        .swipe-action-indicator {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            padding: 5px 12px;
-            border-radius: 20px;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: all 0.15s ease;
-            letter-spacing: 0.02em;
-        }
 
         .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
@@ -1644,7 +1616,7 @@
         }
     }
 
-    // --- ROW ACTIONS: DELETE & INVISIBLE SWIPE (SWIPE LEFT TO DELETE, SWIPE RIGHT TO EDIT) ---
+    // --- ROW DELETE & LONG PRESS ---
     function deleteEntryById(entryId) {
         if (!entryId) return;
         const user = auth.currentUser;
@@ -1679,274 +1651,33 @@
         });
     }
 
-    // --- EDIT TRANSACTION MODAL ---
-    function openEditModal(entryId) {
-        const tx = entries.find(e => e.id === entryId);
-        if (!tx) return;
-
-        const backdrop = document.getElementById('edit-modal-backdrop');
-        if (!backdrop) return;
-
-        document.getElementById('edit-entry-id').value = tx.id;
-        document.getElementById('edit-f-date').value = tx.date || new Date().toISOString().slice(0, 10);
-        document.getElementById('edit-f-desc').value = tx.desc || '';
-        document.getElementById('edit-f-amount').value = tx.amount || '';
-        document.getElementById('edit-f-type').value = resolveType(tx);
-        document.getElementById('edit-f-mode').value = getMode(tx);
-
-        const catSelect = document.getElementById('edit-f-category');
-        catSelect.innerHTML = '';
-        const allCategories = Array.from(new Set([...defaultCategories, ...customCategories]));
-        allCategories.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            opt.innerText = c;
-            if (c === (tx.category || 'General')) opt.selected = true;
-            catSelect.appendChild(opt);
-        });
-
-        backdrop.style.display = 'flex';
-        setTimeout(() => {
-            const descInput = document.getElementById('edit-f-desc');
-            if (descInput) { descInput.focus(); descInput.select(); }
-        }, 50);
-    }
-
-    function closeEditModal() {
-        const backdrop = document.getElementById('edit-modal-backdrop');
-        if (backdrop) backdrop.style.display = 'none';
-    }
-
-    function handleEditModalSubmit(e) {
-        e.preventDefault();
-        const entryId = document.getElementById('edit-entry-id').value;
-        const tx = entries.find(x => x.id === entryId);
-        if (!tx) {
-            closeEditModal();
-            return;
-        }
-
-        const newDate = document.getElementById('edit-f-date').value;
-        const newDesc = document.getElementById('edit-f-desc').value.trim();
-        const newAmount = parseFloat(document.getElementById('edit-f-amount').value);
-        const newType = document.getElementById('edit-f-type').value;
-        const newCategory = document.getElementById('edit-f-category').value;
-        const newMode = document.getElementById('edit-f-mode').value;
-
-        if (!newDesc || isNaN(newAmount) || newAmount <= 0) {
-            showToast("Please enter a valid description and amount");
-            return;
-        }
-
-        // 1. INSTANT OPTIMISTIC UPDATE
-        tx.date = newDate;
-        tx.desc = newDesc;
-        tx.amount = Math.abs(newAmount);
-        tx.type = newType;
-        tx.category = newCategory;
-        tx.mode = newMode;
-
-        entries.sort((a,b) => new Date(b.date) - new Date(a.date));
-        localStorage.setItem('finance_data_local', JSON.stringify(entries));
-        const user = auth.currentUser;
-        if (user) {
-            localStorage.setItem('finance_data_local_' + user.uid, JSON.stringify(entries));
-        }
-
-        closeEditModal();
-        renderHome();
-        showToast("Transaction updated");
-
-        // 2. BACKGROUND CLOUD SYNC
-        if (user && !isLocalGuest) {
-            getUserTransactionsRef(user.uid).doc(entryId).set({ ...tx }, { merge: true }).catch(err => {
-                console.warn("Background cloud update notice:", err);
-            });
-        }
-    }
-
-    // --- INVISIBLE SWIPE GESTURE ENGINE ---
-    function updateSwipeIndicator(row, direction, isReady) {
-        let indicator = row.querySelector('.swipe-action-indicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.className = 'swipe-action-indicator';
-            row.appendChild(indicator);
-        }
-
-        if (direction === 'left') {
-            indicator.style.left = 'auto';
-            indicator.style.right = '14px';
-            if (isReady) {
-                indicator.style.background = '#F43F5E';
-                indicator.style.color = '#FFFFFF';
-                indicator.style.boxShadow = '0 0 16px rgba(244, 63, 94, 0.6)';
-                indicator.innerHTML = '🗑️ Release to Delete';
-            } else {
-                indicator.style.background = 'rgba(244, 63, 94, 0.25)';
-                indicator.style.color = '#FDA4AF';
-                indicator.style.boxShadow = 'none';
-                indicator.innerHTML = '👈 Delete';
-            }
-        } else {
-            indicator.style.right = 'auto';
-            indicator.style.left = '14px';
-            if (isReady) {
-                indicator.style.background = '#3B82F6';
-                indicator.style.color = '#FFFFFF';
-                indicator.style.boxShadow = '0 0 16px rgba(59, 130, 246, 0.6)';
-                indicator.innerHTML = '✏️ Release to Edit';
-            } else {
-                indicator.style.background = 'rgba(59, 130, 246, 0.25)';
-                indicator.style.color = '#93C5FD';
-                indicator.style.boxShadow = 'none';
-                indicator.innerHTML = '👉 Edit';
-            }
-        }
-    }
-
-    function removeSwipeIndicator(row) {
-        const indicator = row.querySelector('.swipe-action-indicator');
-        if (indicator) indicator.remove();
-    }
-
-    function attachRowSwipeAndActions(row, entryId) {
-        let startX = 0;
-        let startY = 0;
-        let currentDx = 0;
-        let isSwiping = false;
-        let isScrolling = false;
-        let isPointerDown = false;
-        let pressTimer = null;
-
-        const cells = row.querySelectorAll('td');
-
-        const resetVisuals = () => {
-            cells.forEach(td => {
-                td.style.transition = 'transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1)';
-                td.style.transform = '';
-            });
-            row.style.transition = 'background-color 0.24s ease';
-            row.style.background = '';
-            removeSwipeIndicator(row);
+    function attachRowLongPress(row, entryId) {
+        let timer = null;
+        const start = (e) => {
+            if (e.target.closest('.editable-cell input, .row-delete-btn')) return;
+            row.classList.add('pressing');
+            timer = setTimeout(() => {
+                row.classList.remove('pressing');
+                confirmDeleteEntry(entryId);
+            }, 550);
         };
-
-        const onStart = (clientX, clientY, target) => {
-            if (target.tagName === 'INPUT' || target.closest('.row-delete-btn')) return false;
-
-            startX = clientX;
-            startY = clientY;
-            currentDx = 0;
-            isSwiping = false;
-            isScrolling = false;
-            isPointerDown = true;
-
-            cells.forEach(td => { td.style.transition = 'none'; });
-
-            pressTimer = setTimeout(() => {
-                if (isPointerDown && !isSwiping && !isScrolling) {
-                    confirmDeleteEntry(entryId);
-                }
-            }, 600);
-            return true;
+        const cancel = () => {
+            if (timer) { clearTimeout(timer); timer = null; }
+            row.classList.remove('pressing');
         };
-
-        const onMove = (clientX, clientY, e) => {
-            if (!isPointerDown) return;
-            const dx = clientX - startX;
-            const dy = clientY - startY;
-
-            if (!isSwiping && !isScrolling) {
-                if (Math.abs(dy) > 7 && Math.abs(dy) > Math.abs(dx)) {
-                    isScrolling = true;
-                    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-                    return;
-                }
-                if (Math.abs(dx) > 7 && Math.abs(dx) > Math.abs(dy)) {
-                    isSwiping = true;
-                    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-                }
-            }
-
-            if (isSwiping) {
-                if (e.cancelable) e.preventDefault();
-                const sign = Math.sign(dx);
-                const abs = Math.abs(dx);
-                const clamped = sign * Math.min(110, abs * 0.72);
-                currentDx = dx;
-
-                cells.forEach(td => {
-                    td.style.transform = `translateX(${clamped}px)`;
-                });
-
-                if (dx < 0) {
-                    const op = Math.min(0.28, abs / 180);
-                    row.style.background = `rgba(244, 63, 94, ${op})`;
-                    updateSwipeIndicator(row, 'left', abs >= 50);
-                } else {
-                    const op = Math.min(0.28, abs / 180);
-                    row.style.background = `rgba(59, 130, 246, ${op})`;
-                    updateSwipeIndicator(row, 'right', abs >= 50);
-                }
-            }
-        };
-
-        const onEnd = () => {
-            if (!isPointerDown) return;
-            isPointerDown = false;
-            if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-
-            if (isSwiping) {
-                const finalDx = currentDx;
-                resetVisuals();
-
-                if (finalDx < -50) {
-                    confirmDeleteEntry(entryId);
-                } else if (finalDx > 50) {
-                    openEditModal(entryId);
-                }
-            } else {
-                resetVisuals();
-            }
-        };
-
-        // Touch events
-        row.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                onStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
-            }
-        }, { passive: true });
-
-        row.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) {
-                onMove(e.touches[0].clientX, e.touches[0].clientY, e);
-            }
-        }, { passive: false });
-
-        row.addEventListener('touchend', onEnd);
-        row.addEventListener('touchcancel', onEnd);
-
-        // Mouse drag events
         row.addEventListener('mousedown', (e) => {
-            if (e.button === 0) {
-                onStart(e.clientX, e.clientY, e.target);
-            }
+            if (e.button === 0) start(e);
         });
-
-        const onDocMouseMove = (e) => {
-            if (isPointerDown) onMove(e.clientX, e.clientY, e);
-        };
-        const onDocMouseUp = (e) => {
-            if (isPointerDown) onEnd();
-        };
-
-        window.addEventListener('mousemove', onDocMouseMove, { passive: true });
-        window.addEventListener('mouseup', onDocMouseUp);
-
-        // Right-click context menu
-        row.addEventListener('contextmenu', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.closest('.row-delete-btn')) return;
+        row.addEventListener('mouseup', cancel);
+        row.addEventListener('mouseleave', cancel);
+        row.addEventListener('touchstart', start, { passive: true });
+        row.addEventListener('touchend', cancel);
+        row.addEventListener('touchmove', cancel);
+        row.addEventListener('touchcancel', cancel);
+        row.addEventListener('contextmenu', e => {
+            if (e.target.closest('.editable-cell input, .row-delete-btn')) return;
             e.preventDefault();
+            cancel();
             confirmDeleteEntry(entryId);
         });
     }
@@ -2237,7 +1968,7 @@
                     <td class="col-category"><div style="display:flex;align-items:center;justify-content:space-between;width:100%;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${categoryDisplay}</span><button type="button" class="row-delete-btn" onclick="event.stopPropagation();confirmDeleteEntry('${e.id}')" title="Delete entry" aria-label="Delete entry">&times;</button></div></td>
                 `;
                 
-                attachRowSwipeAndActions(row, e.id);
+                attachRowLongPress(row, e.id);
                 txList.appendChild(row);
             });
         }
@@ -3335,7 +3066,6 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             window.closeAllDropdowns();
-            if (typeof closeEditModal === 'function') closeEditModal();
         }
     });
 </script>
@@ -3352,59 +3082,6 @@
             <button id="custom-modal-cancel" class="btn-outline" style="min-width:85px;padding:8px 16px;">Cancel</button>
             <button id="custom-modal-ok" class="add-btn" style="height:42px;padding:0 22px;width:auto;min-width:85px;">OK</button>
         </div>
-    </div>
-</div>
-
-<!-- Edit Transaction Modal (for Swipe Right / Quick Edit) -->
-<div id="edit-modal-backdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(3,6,12,0.85);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:20px;">
-    <div style="background:rgba(11,19,43,0.95);border:1px solid rgba(96,165,250,0.35);border-radius:20px;max-width:480px;width:100%;padding:26px;box-shadow:0 24px 60px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.18);animation:fadeIn 0.2s ease;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-            <h3 style="margin:0;color:#FFFFFF;font-size:1.2rem;font-weight:700;">Edit Transaction</h3>
-            <button type="button" onclick="closeEditModal()" style="background:transparent;border:none;color:var(--text-muted);font-size:1.4rem;cursor:pointer;line-height:1;padding:0 4px;" aria-label="Close">&times;</button>
-        </div>
-        <form id="edit-tx-form" onsubmit="handleEditModalSubmit(event)">
-            <input type="hidden" id="edit-entry-id">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-                <div class="input-group" style="margin:0;">
-                    <label>Date</label>
-                    <input type="date" id="edit-f-date" required>
-                </div>
-                <div class="input-group" style="margin:0;">
-                    <label>Amount (<span class="rupee-sym">&#8377;</span>)</label>
-                    <input type="number" step="0.01" id="edit-f-amount" required>
-                </div>
-            </div>
-            <div class="input-group" style="margin-bottom:14px;">
-                <label>Description</label>
-                <input type="text" id="edit-f-desc" placeholder="e.g. Salary, Rent" required>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:22px;">
-                <div class="input-group" style="margin:0;">
-                    <label>Type</label>
-                    <select id="edit-f-type">
-                        <option value="expense">Expense (-)</option>
-                        <option value="income">Income (+)</option>
-                        <option value="normalneg">Normal (-)</option>
-                        <option value="normalpos">Normal (+)</option>
-                    </select>
-                </div>
-                <div class="input-group" style="margin:0;">
-                    <label>Category</label>
-                    <select id="edit-f-category"></select>
-                </div>
-                <div class="input-group" style="margin:0;">
-                    <label>Mode</label>
-                    <select id="edit-f-mode">
-                        <option value="online">Online</option>
-                        <option value="cash">Cash</option>
-                    </select>
-                </div>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:12px;">
-                <button type="button" onclick="closeEditModal()" class="btn-outline" style="min-width:85px;padding:8px 16px;">Cancel</button>
-                <button type="submit" class="add-btn" style="height:42px;padding:0 22px;width:auto;min-width:120px;">Save Changes</button>
-            </div>
-        </form>
     </div>
 </div>
 <!-- Custom Toast Notification -->
