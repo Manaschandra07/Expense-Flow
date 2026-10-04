@@ -638,7 +638,7 @@
         @media (min-width: 769px) {
             .form-row { display: flex; flex-wrap: wrap; }
             .form-row .input-group { flex: 1 1 150px; }
-            .form-row .add-btn-wrapper { margin-left: auto; min-width: 145px; align-self: flex-end; }
+            .form-row .add-btn-wrapper { margin-left: auto; min-width: 185px; align-self: flex-end; }
         }
         .input-group label {
             color: var(--text-muted); font-weight: 600; font-size: 0.76rem;
@@ -797,6 +797,35 @@
         .val-normal    { color: var(--text-main); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
         .val-normalpos { color: var(--income); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
         .val-normalneg { color: var(--expense); font-weight: 700; font-family: 'RupeeMatched', 'JetBrains Mono', monospace; }
+
+        .exclude-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #94A3B8;
+            background: rgba(148, 163, 184, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            padding: 1px 6px;
+            border-radius: 6px;
+            margin-left: 6px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .phonepe-exclude-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #94A3B8;
+            background: rgba(148, 163, 184, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            padding: 1px 6px;
+            border-radius: 6px;
+            margin-left: 8px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
 
         .back-btn {
             background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border);
@@ -1109,8 +1138,6 @@
                         <select id="f-type">
                             <option value="expense">Expense (-)</option>
                             <option value="income">Income (+)</option>
-                            <option value="normalneg">Normal (-)</option>
-                            <option value="normalpos">Normal (+)</option>
                         </select>
                     </div>
                     <div class="input-group">
@@ -1124,7 +1151,11 @@
                             <option value="cash">Cash</option>
                         </select>
                     </div>
-                    <div class="input-group add-btn-wrapper">
+                    <div class="input-group add-btn-wrapper" style="display:flex;flex-direction:column;justify-content:flex-end;min-width:185px;">
+                        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;cursor:pointer;">
+                            <input type="checkbox" id="f-exclude" style="width:16px;height:16px;cursor:pointer;accent-color:#3B82F6;margin:0;flex-shrink:0;">
+                            <label for="f-exclude" style="margin:0;cursor:pointer;text-transform:none;letter-spacing:normal;font-size:0.77rem;color:var(--text-main);font-weight:600;white-space:nowrap;user-select:none;">Exclude from Monthly Totals</label>
+                        </div>
                         <button type="submit" class="add-btn">Save Entry</button>
                     </div>
                 </form>
@@ -1243,9 +1274,11 @@
                 <select id="edit-tx-type">
                     <option value="expense">Expense (-)</option>
                     <option value="income">Income (+)</option>
-                    <option value="normalneg">Normal (-)</option>
-                    <option value="normalpos">Normal (+)</option>
                 </select>
+            </div>
+            <div class="input-group checkbox-group" style="display:flex;flex-direction:row;align-items:center;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:12px;cursor:pointer;margin-top:4px;margin-bottom:12px;">
+                <input type="checkbox" id="edit-tx-exclude" style="width:18px;height:18px;cursor:pointer;accent-color:#3B82F6;margin:0;flex-shrink:0;">
+                <label for="edit-tx-exclude" style="margin:0;cursor:pointer;text-transform:none;letter-spacing:normal;font-size:0.85rem;color:var(--text-main);font-weight:600;user-select:none;">Exclude from Monthly Totals</label>
             </div>
             <div class="input-group">
                 <label>Category</label>
@@ -1539,6 +1572,7 @@
 
         const savedLocal = JSON.parse(localStorage.getItem('finance_data_local') || '[]');
         entries = savedLocal;
+        if (typeof convertAllLegacyData === 'function') convertAllLegacyData();
         entries.sort((a,b) => new Date(b.date) - new Date(a.date));
         populateCategories();
         renderHome();
@@ -1759,6 +1793,7 @@
                 const parsed = JSON.parse(cached);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     entries = parsed;
+                    if (typeof convertAllLegacyData === 'function') convertAllLegacyData();
                     entries.sort((a,b) => new Date(b.date) - new Date(a.date));
                     populateCategories();
                     renderHome();
@@ -1784,7 +1819,17 @@
                 unsubsFirestore = txRef.onSnapshot(snap => {
                     if (snap.docs.length > 0) {
                         // Critical: doc.id MUST override any data.id so delete/update work 100% reliably
-                        entries = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                        entries = snap.docs.map(doc => {
+                            const d = { ...doc.data(), id: doc.id };
+                            if (d.type === 'normalpos' || d.type === 'normalneg' || d.type === 'normal') {
+                                const newType = (d.type === 'normalpos') ? 'income' : 'expense';
+                                d.type = newType;
+                                d.excludeFromTotals = true;
+                                txRef.doc(doc.id).set({ type: newType, excludeFromTotals: true }, { merge: true }).catch(() => {});
+                            }
+                            d.excludeFromTotals = Boolean(d.excludeFromTotals || d.exclude);
+                            return d;
+                        });
                         entries.sort((a,b) => new Date(b.date) - new Date(a.date));
                         localStorage.setItem('finance_data_local', JSON.stringify(entries));
                         localStorage.setItem('finance_data_local_' + uid, JSON.stringify(entries));
@@ -1795,7 +1840,15 @@
                         if (entries.length === 0 && db) {
                             db.collection("finance_data").where("uid", "==", uid).get().then(legacySnap => {
                                 if (!legacySnap.empty) {
-                                    entries = legacySnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                                    entries = legacySnap.docs.map(doc => {
+                                        const d = { ...doc.data(), id: doc.id };
+                                        if (d.type === 'normalpos' || d.type === 'normalneg' || d.type === 'normal') {
+                                            d.type = (d.type === 'normalpos') ? 'income' : 'expense';
+                                            d.excludeFromTotals = true;
+                                        }
+                                        d.excludeFromTotals = Boolean(d.excludeFromTotals || d.exclude);
+                                        return d;
+                                    });
                                     entries.sort((a,b) => new Date(b.date) - new Date(a.date));
                                     localStorage.setItem('finance_data_local', JSON.stringify(entries));
                                     localStorage.setItem('finance_data_local_' + uid, JSON.stringify(entries));
@@ -2072,8 +2125,14 @@
         const formattedAmt = formatINR(tx.amount);
         const dateFormatted = prettyDate(tx.date);
         const categoryText = tx.category || 'Uncategorized';
+        const typeBadge = resolveType(tx) === 'income' 
+            ? '<span style="color:var(--income);font-weight:700;">Income</span>' 
+            : '<span style="color:var(--expense);font-weight:700;">Expense</span>';
+        const excludeBadge = isExcluded(tx) 
+            ? ' &bull; <span class="exclude-badge" style="margin-left:0;">Excluded from Totals</span>' 
+            : '';
         
-        summary.innerHTML = `<span style="color:#FFF;font-weight:600;">${tx.desc || 'No description'}</span> &bull; ${formattedAmt} &bull; ${dateFormatted} &bull; <span style="text-transform:capitalize;">${categoryText}</span>`;
+        summary.innerHTML = `<span style="color:#FFF;font-weight:600;">${escapeHTML(tx.desc || 'No description')}</span> &bull; ${formattedAmt} (${typeBadge}) &bull; ${dateFormatted} &bull; <span style="text-transform:capitalize;">${escapeHTML(categoryText)}</span>${excludeBadge}`;
         modal.style.display = 'flex';
     }
 
@@ -2095,6 +2154,10 @@
         document.getElementById('edit-tx-amount').value = tx.amount;
         document.getElementById('edit-tx-type').value = resolveType(tx);
         document.getElementById('edit-tx-mode').value = getMode(tx);
+        const editExcludeEl = document.getElementById('edit-tx-exclude');
+        if (editExcludeEl) {
+            editExcludeEl.checked = isExcluded(tx);
+        }
 
         const catSelect = document.getElementById('edit-tx-category');
         catSelect.innerHTML = '';
@@ -2223,6 +2286,7 @@
         const typeInput = document.getElementById('f-type');
         const catInput  = document.getElementById('f-category');
         const modeInput = document.getElementById('f-mode');
+        const excludeInput = document.getElementById('f-exclude');
 
         const dateVal = dateInput.value || new Date().toISOString().slice(0, 10);
         const descVal = descInput.value.trim();
@@ -2230,6 +2294,7 @@
         const typeVal = typeInput.value;
         const catVal  = catInput.value;
         const modeVal = modeInput.value;
+        const excludeVal = excludeInput ? excludeInput.checked : false;
 
         if (!descVal || isNaN(amtVal) || amtVal <= 0) {
             showToast("Please enter a valid description and amount");
@@ -2242,15 +2307,16 @@
         const entryId = docRef ? docRef.id : ('tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
 
         const newEntry = {
-            id:       entryId,
-            uid:      user ? user.uid : localUid,
-            ts:       Date.now(),
-            date:     dateVal,
-            desc:     descVal,
-            category: catVal,
-            amount:   Math.abs(amtVal),
-            type:     typeVal,
-            mode:     modeVal
+            id:                entryId,
+            uid:               user ? user.uid : localUid,
+            ts:                Date.now(),
+            date:              dateVal,
+            desc:              descVal,
+            category:          catVal,
+            amount:            Math.abs(amtVal),
+            type:              typeVal,
+            mode:              modeVal,
+            excludeFromTotals: excludeVal
         };
 
         // 1. INSTANTLY CLEAR FORM INPUT BOXES (0ms delay)
@@ -2258,6 +2324,7 @@
         amtInput.value = '';
         modeInput.value = 'online';
         typeInput.value = 'expense';
+        if (excludeInput) excludeInput.checked = false;
         dateInput.valueAsDate = new Date();
 
         // 2. INSTANTLY INSERT INTO MEMORY & RENDER (0ms delay)
@@ -2319,36 +2386,108 @@
         }
     }
 
-    // Resolve type: old "normal" entries treated as normalneg
+    // Check if transaction is excluded from monthly totals
+    function isExcluded(e) {
+        if (!e) return false;
+        return Boolean(e.excludeFromTotals || e.exclude || e.type === 'normalpos' || e.type === 'normalneg' || e.type === 'normal');
+    }
+
+    // Resolve type: strictly 'income' or 'expense'
     function resolveType(e) {
-        if (e.type === 'normal') return 'normalneg';
-        return e.type;
+        if (!e) return 'expense';
+        if (e.type === 'income' || e.type === 'normalpos') return 'income';
+        return 'expense';
     }
 
     function getMode(e) { return e.mode || 'online'; }
 
+    // Convert legacy normal(+) and normal(-) transactions
+    function migrateLegacyTransaction(e) {
+        if (!e) return false;
+        let modified = false;
+        if (e.type === 'normalpos') {
+            e.type = 'income';
+            e.excludeFromTotals = true;
+            modified = true;
+        } else if (e.type === 'normalneg' || e.type === 'normal') {
+            e.type = 'expense';
+            e.excludeFromTotals = true;
+            modified = true;
+        } else {
+            if (e.type !== 'income' && e.type !== 'expense') {
+                e.type = 'expense';
+                modified = true;
+            }
+            if (e.excludeFromTotals === undefined && e.exclude !== undefined) {
+                e.excludeFromTotals = Boolean(e.exclude);
+                modified = true;
+            } else {
+                e.excludeFromTotals = Boolean(e.excludeFromTotals);
+            }
+        }
+        return modified;
+    }
+
+    function convertAllLegacyData() {
+        let changed = false;
+        if (Array.isArray(entries)) {
+            entries.forEach(e => {
+                if (migrateLegacyTransaction(e)) changed = true;
+            });
+        }
+        try {
+            const rawLocal = localStorage.getItem('finance_data_local');
+            if (rawLocal) {
+                const arr = JSON.parse(rawLocal);
+                if (Array.isArray(arr)) {
+                    let localChanged = false;
+                    arr.forEach(e => {
+                        if (migrateLegacyTransaction(e)) localChanged = true;
+                    });
+                    if (localChanged) {
+                        localStorage.setItem('finance_data_local', JSON.stringify(arr));
+                        changed = true;
+                    }
+                }
+            }
+        } catch (err) {}
+        return changed;
+    }
+
     // Central financial calculation formula (Standard across Dashboard and All Transactions)
+    // Formula:
+    // If Income & Excluded: Don't add to Monthly Earned, but add to Monthly Net.
+    // If Expense & Excluded: Don't deduct in Monthly Spent, but deduct in Monthly Net.
+    // If NOT Excluded: Regular Income (adds to Earned & Net) or Expense (adds to Spent, deducts from Net).
     function calculateFinanceStats(items) {
         let tIn = 0, tOut = 0, netBalance = 0;
         let cIn = 0, cOut = 0, cNet = 0;
 
         items.forEach(e => {
             const amt = parseFloat(e.amount) || 0;
-            const t = resolveType(e);
+            const isIncome = resolveType(e) === 'income';
+            const excluded = isExcluded(e);
             const mode = getMode(e);
             const isOnline = mode === 'online';
             const isCash = mode === 'cash';
 
-            if (t === 'income') {
-                if (isOnline) { tIn += amt; netBalance += amt; }
-                if (isCash)   { cIn += amt; cNet += amt; }
-            } else if (t === 'expense') {
-                if (isOnline) { tOut += amt; netBalance -= amt; }
-                if (isCash)   { cOut += amt; cNet -= amt; }
-            } else if (t === 'normalpos') {
+            if (isIncome) {
+                // If NOT excluded, add to monthly earned
+                if (!excluded) {
+                    if (isOnline) tIn += amt;
+                    if (isCash)   cIn += amt;
+                }
+                // ALWAYS add to monthly net
                 if (isOnline) netBalance += amt;
                 if (isCash)   cNet += amt;
-            } else if (t === 'normalneg') {
+            } else {
+                // Expense
+                // If NOT excluded, add to monthly spent
+                if (!excluded) {
+                    if (isOnline) tOut += amt;
+                    if (isCash)   cOut += amt;
+                }
+                // ALWAYS deduct from monthly net
                 if (isOnline) netBalance -= amt;
                 if (isCash)   cNet -= amt;
             }
@@ -2393,18 +2532,19 @@
 
         let dailyMap = {};
         monthData.forEach(e => {
-            const t = resolveType(e);
-            if (t === 'expense' && getMode(e) === 'online') {
-                dailyMap[e.date] = (dailyMap[e.date] || 0) + e.amount;
+            const isIncome = resolveType(e) === 'income';
+            const excluded = isExcluded(e);
+            if (!isIncome && !excluded && getMode(e) === 'online') {
+                dailyMap[e.date] = (dailyMap[e.date] || 0) + (parseFloat(e.amount) || 0);
             }
         });
 
         // Filter by current quick filter
         let displayList = filtered;
         if (currentFilter === 'expense') {
-            displayList = filtered.filter(e => resolveType(e) === 'expense' || resolveType(e) === 'normalneg');
+            displayList = filtered.filter(e => resolveType(e) === 'expense');
         } else if (currentFilter === 'income') {
-            displayList = filtered.filter(e => resolveType(e) === 'income' || resolveType(e) === 'normalpos');
+            displayList = filtered.filter(e => resolveType(e) === 'income');
         } else if (currentFilter === 'online') {
             displayList = filtered.filter(e => getMode(e) === 'online');
         } else if (currentFilter === 'cash') {
@@ -2422,22 +2562,22 @@
             txList.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:36px 12px;color:var(--text-muted);font-size:0.88rem;">No transactions found for this selection.</td></tr>`;
         } else {
             displayList.forEach((e) => {
-                const t    = resolveType(e);
-                const mode = getMode(e);
-                let prefix = '';
-                if (t === 'income' || t === 'normalpos') prefix = '+';
-                else if (t === 'expense' || t === 'normalneg') prefix = '-';
+                const isIncome = resolveType(e) === 'income';
+                const mode     = getMode(e);
+                const excluded = isExcluded(e);
+                const prefix   = isIncome ? '+' : '-';
 
-                const cashTag = mode === 'cash' ? `<span class="cash-label">(cash)</span>` : '';
+                const cashTag    = mode === 'cash' ? `<span class="cash-label">(cash)</span>` : '';
+                const excludeTag = excluded ? `<span class="exclude-badge" title="Excluded from Monthly Totals">Excluded</span>` : '';
                 const categoryDisplay = e.category || '\u2014';
 
                 const row = document.createElement('tr');
                 row.className = 'tx-row';
                 row.innerHTML = `
                     <td class="col-date">${prettyDate(e.date)}</td>
-                    <td class="col-desc">${e.desc}${cashTag}</td>
-                    <td class="col-amount val-${t}">${prefix}${formatINR(e.amount)}</td>
-                    <td class="col-category">${categoryDisplay}</td>
+                    <td class="col-desc">${escapeHTML(e.desc)}${cashTag}${excludeTag}</td>
+                    <td class="col-amount ${isIncome ? 'val-income' : 'val-expense'}">${prefix}${formatINR(e.amount)}</td>
+                    <td class="col-category">${escapeHTML(categoryDisplay)}</td>
                 `;
                 
                 attachRowLongPress(row, e.id);
@@ -2657,9 +2797,9 @@
 
         // Segment filter
         if (allTxFilter === 'expense') {
-            list = list.filter(e => resolveType(e) === 'expense' || resolveType(e) === 'normalneg');
+            list = list.filter(e => resolveType(e) === 'expense');
         } else if (allTxFilter === 'income') {
-            list = list.filter(e => resolveType(e) === 'income' || resolveType(e) === 'normalpos');
+            list = list.filter(e => resolveType(e) === 'income');
         } else if (allTxFilter === 'online') {
             list = list.filter(e => getMode(e) === 'online');
         } else if (allTxFilter === 'cash') {
@@ -2740,12 +2880,13 @@
             `;
 
             mEntries.forEach(e => {
-                const t = resolveType(e);
-                const isIncome = (t === 'income' || t === 'normalpos');
+                const isIncome = resolveType(e) === 'income';
                 const mode = getMode(e);
+                const excluded = isExcluded(e);
                 const prefix = isIncome ? '+' : '-';
                 const categoryDisplay = e.category || 'Uncategorized';
                 const dateDisplay = formatPhonePeDate(e.date);
+                const excludeTag = excluded ? `<span class="phonepe-exclude-badge">Excluded</span>` : '';
 
                 html += `
                     <div class="phonepe-tx-card" onclick="openTxActionMenu('${e.id}')" title="Click to view options, edit, or delete">
@@ -2757,7 +2898,7 @@
                                 }
                             </div>
                             <div class="phonepe-tx-info">
-                                <div class="phonepe-tx-title">${escapeHTML(e.desc || 'No description')}</div>
+                                <div class="phonepe-tx-title">${escapeHTML(e.desc || 'No description')}${excludeTag}</div>
                                 <div class="phonepe-tx-meta">
                                     <span>${dateDisplay}</span>
                                     <span style="opacity:0.35;">&bull;</span>
@@ -2775,6 +2916,7 @@
                                 </span>
                                 <span style="opacity:0.35;">&bull;</span>
                                 <span>${isIncome ? 'Credited' : 'Debited'}</span>
+                                ${excluded ? `<span style="opacity:0.35;">&bull;</span><span style="opacity:0.75;font-size:0.72rem;color:var(--text-muted);">(Not in totals)</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -2794,9 +2936,9 @@
     function buildInlineCategoryBreakdown(filteredEntries) {
         let catMap = {};
         filteredEntries.forEach(e => {
-            if (resolveType(e) === 'expense') {
+            if (resolveType(e) === 'expense' && !isExcluded(e)) {
                 let cat = e.category || 'Uncategorized';
-                catMap[cat] = (catMap[cat]||0) + e.amount;
+                catMap[cat] = (catMap[cat]||0) + (parseFloat(e.amount) || 0);
             }
         });
         let cardsHTML = '';
@@ -2812,9 +2954,9 @@
         content.innerHTML = '<h1>Yearly Analysis</h1>' + buildInlineCategoryBreakdown(entries);
         let years = {};
         entries.forEach(e => {
-            if (resolveType(e) === 'expense') {
+            if (resolveType(e) === 'expense' && !isExcluded(e)) {
                 const yr = e.date.substring(0,4);
-                years[yr] = (years[yr]||0) + e.amount;
+                years[yr] = (years[yr]||0) + (parseFloat(e.amount) || 0);
             }
         });
         if (Object.keys(years).length === 0) {
@@ -2846,9 +2988,9 @@
         content.innerHTML = `<button class="back-btn" onclick="safeBack()">&#8592; Back to Years</button><h1>${year} Monthly Analysis</h1>` + buildInlineCategoryBreakdown(yearEntries);
         let months = {};
         yearEntries.forEach(e => {
-            if (resolveType(e) === 'expense') {
+            if (resolveType(e) === 'expense' && !isExcluded(e)) {
                 const m = e.date.substring(0,7);
-                months[m] = (months[m]||0) + e.amount;
+                months[m] = (months[m]||0) + (parseFloat(e.amount) || 0);
             }
         });
         if (Object.keys(months).length === 0) {
@@ -2875,7 +3017,9 @@
         content.innerHTML = `<button class="back-btn" onclick="safeBack()">&#8592; Back to Months</button><h1>${monthNameWithYear} Daily Analysis</h1>` + buildInlineCategoryBreakdown(monthFilteredEntries);
         let days = {};
         monthFilteredEntries.forEach(e => {
-            if (resolveType(e) === 'expense') { days[e.date] = (days[e.date]||0) + e.amount; }
+            if (resolveType(e) === 'expense' && !isExcluded(e)) { 
+                days[e.date] = (days[e.date]||0) + (parseFloat(e.amount) || 0); 
+            }
         });
         Object.keys(days).sort().forEach(d => {
             content.insertAdjacentHTML('beforeend',
@@ -2894,9 +3038,10 @@
         dayFilteredEntries.sort((a,b) => (b.ts||0) - (a.ts||0)).forEach(e => {
             if (resolveType(e) === 'expense') {
                 const cashTag = getMode(e) === 'cash' ? ` <span style="font-size:0.68rem;color:var(--text-muted);">(cash)</span>` : '';
+                const excludeTag = isExcluded(e) ? ` <span class="exclude-badge">Excluded from Totals</span>` : '';
                 content.insertAdjacentHTML('beforeend',
                     `<div class="list-item" style="cursor:default">
-                        <span>${e.desc}${cashTag}</span>
+                        <span>${escapeHTML(e.desc)}${cashTag}${excludeTag}</span>
                         <span class="val-expense">${formatINR(e.amount)}</span>
                     </div>`
                 );
@@ -2923,6 +3068,7 @@
             "Category",
             "Payment Mode",
             "Type",
+            "Exclude From Totals",
             "Cash Flow",
             "Amount (INR)",
             "Net Impact (INR)"
@@ -2941,29 +3087,18 @@
             const descVal = (e.desc || '').replace(/"/g, '""');
             const catVal = (e.category || 'Food').replace(/"/g, '""');
             const modeVal = getMode(e) === 'cash' ? 'Cash' : 'Online';
-            const t = resolveType(e);
+            const isIncome = resolveType(e) === 'income';
+            const excluded = isExcluded(e);
 
-            let typeLabel = "Expense";
-            let flowLabel = "Outflow";
+            let typeLabel = isIncome ? "Income" : "Expense";
+            let excludeLabel = excluded ? "Yes" : "No";
+            let flowLabel = isIncome ? "Inflow" : "Outflow";
             let amt = parseFloat(e.amount || 0);
             if (isNaN(amt)) amt = 0;
-            let signedAmt = -Math.abs(amt);
+            let signedAmt = isIncome ? Math.abs(amt) : -Math.abs(amt);
 
-            if (t === 'income') {
-                typeLabel = "Income";
-                flowLabel = "Inflow";
-                signedAmt = Math.abs(amt);
+            if (isIncome) {
                 totalInflow += amt;
-            } else if (t === 'normalpos') {
-                typeLabel = "Normal (Credit)";
-                flowLabel = "Inflow";
-                signedAmt = Math.abs(amt);
-                totalInflow += amt;
-            } else if (t === 'normalneg') {
-                typeLabel = "Normal (Debit)";
-                flowLabel = "Outflow";
-                signedAmt = -Math.abs(amt);
-                totalOutflow += amt;
             } else {
                 totalOutflow += amt;
             }
@@ -2971,7 +3106,7 @@
             const amtVal = amt.toFixed(2);
             const signedVal = (signedAmt >= 0 ? '+' : '') + signedAmt.toFixed(2);
 
-            csvRows.push(`"${dateVal}","${descVal}","${catVal}","${modeVal}","${typeLabel}","${flowLabel}",${amtVal},${signedVal}`);
+            csvRows.push(`"${dateVal}","${descVal}","${catVal}","${modeVal}","${typeLabel}","${excludeLabel}","${flowLabel}",${amtVal},${signedVal}`);
         });
 
         // Add summary block at the bottom
@@ -3048,7 +3183,7 @@
 
                 const firstLineCols = parseLine(lines[0]);
                 let hasHeader = false;
-                let dateIdx = -1, descIdx = -1, catIdx = -1, amtIdx = -1, typeIdx = -1, modeIdx = -1;
+                let dateIdx = -1, descIdx = -1, catIdx = -1, amtIdx = -1, typeIdx = -1, modeIdx = -1, excludeIdx = -1;
 
                 firstLineCols.forEach((col, idx) => {
                     const clean = col.toLowerCase().replace(/[^a-z]/g, '');
@@ -3056,6 +3191,7 @@
                     else if (clean.includes('desc') || clean.includes('title') || clean.includes('item') || clean.includes('name')) { descIdx = idx; hasHeader = true; }
                     else if (clean.includes('cat')) { catIdx = idx; hasHeader = true; }
                     else if (clean.includes('amount') || clean.includes('cost') || clean.includes('price') || clean.includes('val')) { amtIdx = idx; hasHeader = true; }
+                    else if (clean.includes('exclud')) { excludeIdx = idx; hasHeader = true; }
                     else if (clean.includes('type')) { typeIdx = idx; hasHeader = true; }
                     else if (clean.includes('mode') || clean.includes('pay') || clean.includes('method')) { modeIdx = idx; hasHeader = true; }
                 });
@@ -3110,13 +3246,28 @@
                     let amount = parseFloat(cleanAmt);
                     if (isNaN(amount) || amount === 0) continue;
 
-                    // Type
+                    // Type & Exclude
                     let rawType = typeIdx >= 0 && cols[typeIdx] ? cols[typeIdx].toLowerCase() : '';
                     let type = 'expense';
-                    if (rawType.includes('income') || rawType === '+' || rawType.includes('credit')) type = 'income';
-                    else if (rawType.includes('pos')) type = 'normalpos';
-                    else if (rawType.includes('neg') || rawType.includes('debit')) type = 'normalneg';
-                    else type = 'expense';
+                    let excludeFromTotals = false;
+                    if (rawType.includes('income') || rawType === '+' || rawType.includes('credit')) {
+                        type = 'income';
+                    } else if (rawType.includes('pos')) {
+                        type = 'income';
+                        excludeFromTotals = true;
+                    } else if (rawType.includes('neg') || rawType.includes('debit')) {
+                        type = 'expense';
+                        excludeFromTotals = true;
+                    } else {
+                        type = 'expense';
+                    }
+
+                    if (excludeIdx >= 0 && cols[excludeIdx]) {
+                        const exStr = cols[excludeIdx].trim().toLowerCase();
+                        if (exStr === 'yes' || exStr === 'true' || exStr === '1' || exStr.includes('exclud')) {
+                            excludeFromTotals = true;
+                        }
+                    }
 
                     // Mode
                     let rawMode = modeIdx >= 0 && cols[modeIdx] ? cols[modeIdx].toLowerCase() : 'online';
@@ -3128,7 +3279,8 @@
                         category: category,
                         amount: Math.abs(amount),
                         type: type,
-                        mode: mode
+                        mode: mode,
+                        excludeFromTotals: excludeFromTotals
                     });
                 }
 
@@ -3891,6 +4043,8 @@
             const typeVal = document.getElementById('edit-tx-type').value;
             const catVal  = document.getElementById('edit-tx-category').value;
             const modeVal = document.getElementById('edit-tx-mode').value;
+            const excludeEl = document.getElementById('edit-tx-exclude');
+            const excludeVal = excludeEl ? excludeEl.checked : false;
 
             if (!descVal || isNaN(amtVal) || amtVal <= 0) {
                 showToast("Please enter a valid description and amount");
@@ -3898,12 +4052,13 @@
             }
 
             // 1. INSTANT OPTIMISTIC UPDATE
-            tx.date     = dateVal;
-            tx.desc     = descVal;
-            tx.amount   = Math.abs(amtVal);
-            tx.type     = typeVal;
-            tx.category = catVal;
-            tx.mode     = modeVal;
+            tx.date              = dateVal;
+            tx.desc              = descVal;
+            tx.amount            = Math.abs(amtVal);
+            tx.type              = typeVal;
+            tx.category          = catVal;
+            tx.mode              = modeVal;
+            tx.excludeFromTotals = excludeVal;
 
             // Sort so latest date is first
             entries.sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -3932,6 +4087,7 @@
         });
     }
     initTxModals();
+    if (typeof convertAllLegacyData === 'function') convertAllLegacyData();
 
     // Close on Escape key
     document.addEventListener('keydown', (e) => {
