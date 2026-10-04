@@ -1151,12 +1151,12 @@
                             <option value="cash">Cash</option>
                         </select>
                     </div>
-                    <div class="input-group add-btn-wrapper" style="display:flex;flex-direction:column;justify-content:flex-end;min-width:185px;">
-                        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;cursor:pointer;">
+                    <div class="input-group add-btn-wrapper" style="display:flex;flex-direction:column;justify-content:flex-end;min-width:205px;">
+                        <label for="f-exclude" style="display:flex;align-items:center;gap:7px;margin-bottom:8px;cursor:pointer;text-transform:none;letter-spacing:normal;font-size:0.78rem;color:var(--text-main);font-weight:600;white-space:nowrap;user-select:none;">
                             <input type="checkbox" id="f-exclude" style="width:16px;height:16px;cursor:pointer;accent-color:#3B82F6;margin:0;flex-shrink:0;">
-                            <label for="f-exclude" style="margin:0;cursor:pointer;text-transform:none;letter-spacing:normal;font-size:0.77rem;color:var(--text-main);font-weight:600;white-space:nowrap;user-select:none;">Exclude from Monthly Totals</label>
-                        </div>
-                        <button type="submit" class="add-btn">Save Entry</button>
+                            <span>Exclude from Monthly Totals</span>
+                        </label>
+                        <button type="submit" class="add-btn" style="width:100%;">Save Entry</button>
                     </div>
                 </form>
             </div>
@@ -1184,13 +1184,6 @@
                     </div>
                     <div class="table-wrapper">
                     <table id="tx-table"><thead><tr><th class="col-date">Date</th><th class="col-desc">Description</th><th class="col-amount">Amount</th><th class="col-category">Category</th></tr></thead><tbody id="tx-list"></tbody></table>
-                    </div>
-                    <div id="see-all-tx-footer" style="text-align:center;padding:12px 0 2px;border-top:1px solid rgba(255,255,255,0.06);margin-top:12px;">
-                        <button class="btn-outline" style="font-size:0.84rem;padding:7px 20px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;" onclick="navigateTo('all-transactions')">
-                            <span>See All Transactions</span>
-                            <span id="see-all-lifetime-count" style="color:var(--primary-hi);font-weight:700;"></span>
-                            &rarr;
-                        </button>
                     </div>
                 </div>
                 <div class="panel">
