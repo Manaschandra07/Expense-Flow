@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.warn("Global error handled:", message, source, lineno, colno, error);
+            return true;
+        };
+        window.addEventListener('error', function(e) {
+            if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+                console.warn("Resource loading handled:", e.target.src || e.target.href);
+            }
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+            return true;
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+            console.warn("Unhandled rejection handled:", e.reason);
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+            return true;
+        });
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ExpenseFlow</title>
@@ -18,10 +38,10 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&text=%E2%82%B9&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&text=%E2%82%B9&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="/firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js" crossorigin="anonymous"></script>
+    <script src="/firebase-config.js" crossorigin="anonymous"></script>
     <style>
         @font-face {
             font-family: 'RupeeMatched';
@@ -736,8 +756,8 @@
             user-select: none;
         }
 
-        .tx-row { transition: background-color 0.15s ease; border-radius: 8px; }
-        .tx-row:hover { background-color: rgba(255, 255, 255, 0.035); }
+        .tx-row { transition: background-color 0.15s ease; border-radius: 8px; cursor: pointer; }
+        .tx-row:hover { background-color: rgba(255, 255, 255, 0.05); }
         .tx-row.pressing { background-color: rgba(244, 63, 94, 0.15); }
 
         .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -751,16 +771,6 @@
         }
 
         .cash-label { font-size: 0.7rem; color: #F59E0B; margin-left: 6px; font-weight: 600; }
-
-        .editable-cell { cursor: pointer; border-bottom: 1px dashed rgba(255, 255, 255, 0.15); transition: background-color 0.2s; border-radius: 4px; }
-        .editable-cell:hover { background-color: rgba(59, 130, 246, 0.15); }
-        .editable-cell input, .cell-edit-input {
-            background: #0B1226 !important; color: #FFFFFF !important; padding: 4px 8px !important;
-            font-size: 0.88rem !important; font-family: inherit !important;
-            border: 1px solid var(--primary-hi) !important; border-radius: 6px !important;
-            width: 96% !important; box-sizing: border-box !important; outline: none !important;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
-        }
 
         .analysis-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 30px; margin-top: 15px; }
         @media (max-width: 768px) { .analysis-cat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
@@ -809,6 +819,196 @@
             font-family: inherit; font-weight: 600; backdrop-filter: blur(10px);
         }
         .btn-outline:hover { color: var(--text-main); border-color: var(--primary-hi); background: rgba(59, 130, 246, 0.18); }
+
+        /* PhonePe-Style All Transactions UI */
+        .see-all-btn {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--primary-hi);
+            border: 1px solid rgba(96, 165, 250, 0.35);
+            padding: 7px 14px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+        .see-all-btn:hover {
+            background: rgba(59, 130, 246, 0.22);
+            border-color: var(--primary-hi);
+            color: #FFFFFF;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+        }
+        .phonepe-group {
+            margin-bottom: 28px;
+        }
+        .phonepe-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .phonepe-month-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .phonepe-month-stats {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .phonepe-month-stats strong {
+            font-family: 'RupeeMatched', 'JetBrains Mono', monospace;
+        }
+        .phonepe-tx-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .phonepe-tx-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 14px 16px;
+            background: rgba(11, 19, 43, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .phonepe-tx-card:hover {
+            background: rgba(17, 29, 64, 0.88);
+            border-color: rgba(96, 165, 250, 0.4);
+            transform: translateY(-1.5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(59, 130, 246, 0.15);
+        }
+        .phonepe-tx-card:active {
+            transform: scale(0.99);
+        }
+        .phonepe-tx-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+            flex: 1;
+        }
+        .phonepe-icon-bubble {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+        .phonepe-tx-card:hover .phonepe-icon-bubble {
+            transform: scale(1.05);
+        }
+        .phonepe-icon-bubble.income {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.1));
+            color: #10B981;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .phonepe-icon-bubble.expense {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.22), rgba(225, 29, 72, 0.1));
+            color: #F43F5E;
+            border: 1px solid rgba(244, 63, 94, 0.35);
+        }
+        .phonepe-tx-info {
+            min-width: 0;
+            flex: 1;
+        }
+        .phonepe-tx-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #FFFFFF;
+            line-height: 1.35;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .phonepe-tx-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .phonepe-tx-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .phonepe-tx-amount {
+            font-family: 'RupeeMatched', 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .phonepe-tx-subtext {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .phonepe-mode-cash {
+            color: #F59E0B;
+            font-weight: 600;
+        }
+        .phonepe-mode-online {
+            color: #60A5FA;
+            font-weight: 500;
+        }
+        .phonepe-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+        @media (max-width: 680px) {
+            .phonepe-stats-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .phonepe-tx-card {
+                padding: 12px 14px;
+            }
+            .phonepe-icon-bubble {
+                width: 38px;
+                height: 38px;
+            }
+            .phonepe-tx-title {
+                font-size: 0.9rem;
+            }
+            .phonepe-tx-amount {
+                font-size: 0.98rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -932,8 +1132,13 @@
 
             <div class="dashboard-grid">
                 <div class="panel">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
                         <h3 style="margin:0;">Transaction History</h3>
+                        <button id="see-all-tx-btn" class="see-all-btn" onclick="navigateTo('all-transactions')" title="View complete lifetime transactions segregated by month and year">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <span>See All Transactions</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
                     </div>
                     <!-- V2.0 Quick Filter Segmented Buttons -->
                     <div class="v2-filter-bar">
@@ -949,6 +1154,13 @@
                     <div class="table-wrapper">
                     <table id="tx-table"><thead><tr><th class="col-date">Date</th><th class="col-desc">Description</th><th class="col-amount">Amount</th><th class="col-category">Category</th></tr></thead><tbody id="tx-list"></tbody></table>
                     </div>
+                    <div id="see-all-tx-footer" style="text-align:center;padding:12px 0 2px;border-top:1px solid rgba(255,255,255,0.06);margin-top:12px;">
+                        <button class="btn-outline" style="font-size:0.84rem;padding:7px 20px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;" onclick="navigateTo('all-transactions')">
+                            <span>See All Transactions</span>
+                            <span id="see-all-lifetime-count" style="color:var(--primary-hi);font-weight:700;"></span>
+                            &rarr;
+                        </button>
+                    </div>
                 </div>
                 <div class="panel">
                     <h3>Daily Spending Rank</h3>
@@ -956,6 +1168,10 @@
                     <div id="rank-list"></div>
                 </div>
             </div>
+        </div>
+
+        <div id="screen-all-transactions" class="screen">
+            <div id="all-transactions-content"></div>
         </div>
 
         <div id="screen-analysis" class="screen"><div id="analysis-content"></div></div>
@@ -1057,56 +1273,119 @@
 <script>
      const ICON_DATA_URI = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wgARCALgAuADASIAAhEBAxEB/8QAGwABAQACAwEAAAAAAAAAAAAAAAECAwQFBgf/xAAZAQEBAQEBAQAAAAAAAAAAAAAAAQIDBAX/2gAMAwEAAhADEAAAAfmY3CUgCwsCoLFECyiLBYLLAACoAAAAAAAAALAFIAAAAAAAAAAAAAAAAAAACgAhSKIUigCKJYLLKWUiohaggKACBSCgAAAgKAWAIAAAAAAAAAALAAAAAAAACgAlQoEoSgBLBQiqllJQEhZaIFBKIsLAAFIoiwsBZRKJULKIAAAWIAAAUgCwsAAAUgAAAKACFAJSggAAKAlAABKAJQAAAgKACKIoAAlQoIACwCiUIohSKiWUiwAAAFIBYAAKKAAAAAAAAAAAAAAAAAAAAAAAAAASgAACUAEsCiWUAASwCFlEAAsACwooAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABKEBSAJQSwqUlAKAAAAAAAAAAAABAUAoikiiKIoSiKIpYsQFAAAAAAAAAAAAAAACAAJYKAKAAAAAAAAAAUQKKIoiiKIoiiKIoiiKIogEqIpYAAAAAAAAAAAAAIACgAAAAAAAAAAABQEFovo7jzj6ds15vlr6ks+WvqQ+WvqQ+WvqSPlz6iPlr6la+WX6lI+WvqY+WPqZflj6mPlk954nPo0yp0ggFgAAAAAAAAAAAAAAAAAAAAAAAAAAFALKWvSfSvPcn1fIz18THtjmOFF5zgDnuAOe4A57gDnuAOfevpz3Apz719Xn5cDI7vg8fv8AnPh87TrPH9iSpYJUoSiKIsAAAAAAAAAAAAAAAAAAAAAABQBZbFmVn1GMfd8rj4XXu2YwzmBc2tJsaxsay7GsbGumy6qbbqtbc9Ow5He9B3kz8z6PvOj8H04szuLFCAAAIohSAAAAAAAAAAAALAAAAAAUAAAostls+nRPf8zja89W7IxLIisRbiKkXJjTJiM2NMssKbNmnYcjveh7xPm3Sd30nz/oSVNwSxUQAAAACURRFgAAAAAAAAAAAAAAKAAAKUsqLMtT6ZLPf87iatmvdxxuIiRYhUFQVBbjS3GmVxq7NmrYcjvOi7xPnHSd30vz/dJZnaVECgARURYAAAAAJYAAAAAAAWUQpAACgAAClAlLSzKz6Xjlj7/BxNWzV0Yy4kJAhYAhUFsLbjTK402bNWdcnvOi72PnPS9103zvbismoqIIiiKIFAioiwAAAAgAAAAAAKBKIUlCUABQKFQWlKZTLU+la9mv3eLiatmroxiElghIIVC1BUFsVlccjPPXsXk950XeHzzpu56f53rxmUzqTJGKiKiTIYqJMpEWKAlRAAAARRFgAAABQAAAAAUUoirpLVLsz1NN2q+iat2n2+Th6turrMccsSSyCAAAlAFlW5YZVnnr2HI73oe8j5/0/d9V8/1aG5LpbkuhvJob0uiciJom7XLgykYqjFUsAlRAAAAAAJRAAUAAAACygtKWWvf6nD9dyeh9fn7fR1Ov057Ti8HV1el6fset5zia9mrVxlhJZCWABAAsFFXLHIyz17Df3fR9zLjn1emu/wA/P5YnoMvPXM9DfPJPQ3z1PQXz9k9DxOq2x57yX2byvl7+CmU495LIiyUCLIAAAAAEKQoAAAABQKoS2ZabvvHxn7TvHj+LyeJ9Pjr15a9THVnq1fRdfzODlxte3XqYTKGMyGMyLiyiRSxRFEUKpc8cjd2/T9ovXactOW5rTO26rG26km66qbbqsm7LTmcr0Pme3xn5n1ntvFeD2YyzGoIixQiLAAAAAAAAAAACgCrZbLljlp3H3X4V9xTx/U/QvP8At5eW19vp9Geq1dvhq8jidtxzqcO0wTrJ2cOtnZjrJ2kOsdmTrJ2herdoTq3aDq72Q629kXrsufkcLssOZXRae114dfewsnXuwqdfefY4GXN45ruvKtmerNOR2nU9pmdJ4P3fhfB6cccpz3JUQSwCVEAAAAAAAAAAoAC0stXLHLU7n7b8S+210Ozj8T38+3x6PUx388/jc+innTPonnCejecHo3nCejeciekebp6N5snpHmx6S+aHpHmyeknnEejech6SedHo3nB6N5wejedHonnaei2+ZzjvPL9x2034nPPX23v7Tqu0k6Xw3ufD+D0Y45TnuSzKLJYsAhKIAAAAACygAAABSlWrljlqdx9u+I/bq83wubwfpY0admnXOYzBnOa4mxribGuJtahsaibWobWpJtmobmkbmkbmkbpqG26abWobbpptumrtuqm7LRnHI7LqeQnZeY9v4bG+R2nVdn1dR4n2ni/n+jHHKct4rIkrKBYsAgCLAAAACgAAACqC2Wrljlqdx9u+JfbrfM8HncD6WOPo26dc8MLgyxYyVjEyYxMmMM2BMmMM2AzYDNgM2AyYjK4DNgM7gM2FM2FM8tdNmerI3cnicivTeI9n4rGuR2PWdh0dV4723mfD263Hk6OO8FmLJZEWSpRBAACURRAAUAAACy0KLLVymWp3H274j9tt811/Ydf9LHF07tGsa9eetmY3FESSyEqQqLKkKgqQySGTEZMRkxGSC3FWTEubEZ3CmzPVkbuRxN9ej8f6bzGbu53X8rbnYadW3ceM9Rn478wmWPg9ElmUlRAsWAQAABFEBQAACgUsopWWWOW53H234l9ta8z1/P6/6WONo3aNY14ZYM4y4pJYkIgBCAEFQVBUAVYAlVO2l6rkez3cs+OvrB5O+rHlcvUQ81t9Ba6zqPVQ8xt9COhy7vXbl1HL6znfnmOeHh9ExymbJZEWSgRZAAAAAAAACgFLKWy1csctzuPtnxT7W15nr+f1/wBLPG0btOsatezWzjjlikliQIgAiWAAUlgAAFDlnZ97Oj5Z3adePXO1oG9oHIaBycuNkcjHXjG1pG66co38Pk8TG/BYZ4/P9OEyxxZKiSpYAIgAAAALKIolAAKoLZaueOW3cfaviv2m3zPX8/gfSnG0btNxqwzwZxxyxSSxIEiwCosQAACKIKCp6XzXr8NXX7uNvmxkKxhmxRlc+wk67Lut+M9Dj6HTHRXsuBvWGWNt3cTk8TGvD4Z4/O9OEyxzZLMosiLFCEsAAAALKAAABaAtl0yyxy07j7T8W+0XXmev5/A+lnjaN+i514Z4M445YpJYkWIlEWUAlJFEFARRBT1XlO8jPi83g7xjJIt7H1XHn57vHXcOHe8fo8Zz7nDqGncZdMO/5Hmc8Tuem5PYunkeF9A8f09HzvDZj5PZhjlM3GWZslRBLBAEUQAAFAAAAstLKKulyxy07j7P8Y+z3XmeBzuB9KcbTu03GvDPBMccsUksRLALEogAAsSiACksps1q9N1nH7Kzgel38vycOR0nH154bMdc22TAZsBsaybLrG7Pj2Tse381txOD87+19B5vV8wx2YZ9uEyxxZLIgliwCAIsAAKAAACillLZdLljnp2/2b4z9l1rzPB53A+k4+ndqY1YbNaYyxMVhAkWAWARRBQCUQWAQaX1PS+98+NPQXRnzZY4TczmCM2BM+36j1XPPU9X6fy5bg6XO67G3PRknK7nz+/M6rwP3H5R4/b0eOeOPRjLM2SyAWCAAIACgAAAopZS2XS545adv9l+NfZNa81wedwfpXjat2ljXhngmMsSSwixIoiqgSKIsEqosEogpLzz1/D7bzXl8+Oth2xZjEyY2Tk+h27vNw2uj4knqHl+cbvPew4t15W4PT12ZarJu2aMzs5w++46+JY930vk92OOUzrFZEEqWQAAAAAAABRSylsulzwy07f7L8a+za35ng87hfSvG1bdTGvDPFMJlDGZRJMoRSSZQiqkyhFEUYqqSkkqp6zyf0Hi4nUcnh6444MbhJJMux6vts59F1fP6zjy6SYPR0zusei7fxO3lm6cXTWd10256c15HZ9Tyo6/579f+Q+D04TLHn1ksiCVLIAAAALAABQCqC2Wrljlp2/2b4p9u1vy3C5/C+nrjad+pnVhtxTXM4mEzhgziYzMYMlYzOGLImMyGLKGLKGKqxmUMPpvzb6Rwnl+Nv43flhjcJlJJm8nik9pOk7nhz6fqfW3WvIPR8HbqmerVyYjO4I256czfv42+30nxH7V8f8AB24ks4dcZUSWShEUQAAFlEKRRKAVQW42srjdM/vXwT3rXo+u9R5/6PTr9XJ1dc8fHfimmbYaptia5thrm2GtsGubCa5sVrmwa5shrbImubIa5slPofzv6J53lePyON354YZYTEjFKkTLk8RZ33M8rcPYzyXZ5nd9R2WeXkXM4XVlcMlzy15m7fxuRb3/AMk+ufGvD1wxs825LISpYIAgAALKIUAACqlFlq3G1llhdPqfofhnpdb9txLzvVvrMOzx6TrJ2WNdc7GV107GHXzsFnXzsIcCdhK4E50ODOdLODObK4c5mJw5y8bOLOThpo9z4v0/B1PF7TrOnPThngzjEZJ3EnUz2Hmo4ZNqlO47XqO15Xrum7bqNZtlrLPDNdnJ43Pt7D5D9F+dfO6SWcLJZCVLABEAABQAAABSygFFWxWVxaZ3C1mwGdwVmwGbAZsBmwGbAZsBmwGcxGbAZXBWbCmfqfKbq+sdD6Xz/t1w9e7V154Y5YpOVxSet19H3PO9XxfQtPOcruQurpY1aZd5ZSxlnhsrZ2/W9tnfivMbdXy7CZJZKJAAQBFgKAAAABQFAsVbBbjaqC3G1UFQVBUFuIqCoKgqKykGTGluIyuN09x6T5R9Y7b6PR2fA92dGG3BnCZRMVhyO5893cu7puz6QFuZVhlM6u3HnLyfNeg+ZeLWBPJEslQgCACAAAAAAAAFiqABYKloCoKgoAAAoAAABYKgtirYrPtOqun2LpfJfRvV281r7PherHGm7BnXM4mFokyGNyRLlamd5ph2E+eefWrgWeDMEQRBAEAEAAAAAAAALBRQAAFQUAAUAABYAFgVBUoAsVbBkl0y7Lq7X1d8r9b6O3aae+0+q9Jj2HG3jjzfE0ttNWW3ecTb2OedYcfzvmPJnlcM8uISEshKiAAAiogAAAAAAAKlAAoAAAABZQAAAAAAAKAqUWC2KyRWSK2ei8zdX6J2nyd06fXdfyrkdL9M2fL+On1Dqvn95z0Pn8XLmiZWJARAJZAAAQBFEAAAAAAKSgAAFAAAAAAUBKAAAAAABVSiwUUsFuKskFQVBYhYQQBCAECAAAQABFgBZYCkAWCgAAAAFAAAAAVKAAAAAAAABVABYFSgUAARFgACQAABFgAEAAAAARYWUJQAAAAAAFAAALAsoAAAAAAAAAsFFAAAAAAEsIAAAAEAEAAAAAAAAAAAAAAAAAABQoIVKAAAAAAAAAALBUCwLBUCwAAAAAAJYFkAAAAAAAAAAAAAAAAAAC1FAAAAAAAAAAAAAAAAAAAAAAAAAEVEAAAAAAAAAAAAAAAAAKSlAAAAAAAAAAAAAAFgAAAAAAAAAAAEJRFEUQAAAAAAAAAAAFlAAAUAAAAAAAAAAAABUFikAAAAAAAAAAEAAAAQAp//xAAxEAABBAECAwYGAgMBAQAAAAAAAQIDBBEFFBITNRUgMjNAUAYQITAxYCI0IyRBoCX/2gAIAQEAAQUC/wDRrQ0ma2jNArInYNQ7BqHYNQ7BqHYNQ7BqHYNQ7BqHYNQ7BqHYNQ7BqHYNQ7BqHYNQ7BqHYNQ7BqHYNQ7BqHYNQtaA5EkY6N/6FodNLViWblo6d6nNec55znnOec5xznHOcc5xznHOcc5xznHOcc5xznHOcc5xznHOcc1wkriKyprVFLdf9C+H28Onzuy8yZMmTJkyZMmTJkyZMmTJkyZ+SFZ3+PUo+Tf/AEHQemyflfTIVfBrfVf0HQumyflfSoNK3l611T9B0Pp0n5X0qDSt4Na6p+g6H06T8r6VBpW8Gs9U/QdD6dJ+V9Kg0reDWeqfoOh9Ok/K+lQaVvBrPU/0HROnSflfSoNK3g1jqf6DonTpPyvpUGlbwax1P9B0Tp0viX0qDSt4NY6n+g6J06X8r6VBpW8Gr9T/AEHROnS+JfSoNK3g1fqfvqMcpwOOBxwONG+mny/lfSoNK3g1ZqrqXA44HHA44HHLect5y3nLect5y3nLeK1U9woaK6RI69esjp2iztFmQdKhWXMMv5X0qDSt4HyIkqTIc9pz2nPac9pz2m4abhpz2nPac9pz2k1OrZS/o74k9s+HtPRUszcA52VVTIqiqUv68n5X0zSv4LC/7GTJkyZMmTJkyZMjXKiwTcRrunJw+1RMWWVWtrwP/Ki/JRSl/Wk/K+mQg8Nj+x3891BqkD+ZHqNfa3PadJ6nbT/WeKL81Kf9eT8r6ZCHw2PP+6hTX+XxOz/N7TpHVP8AluFYXqL81Kn9d/59MhEv0n8/7qFXzPibw+06R1SV3C3+E7J9NUdQsmwtGwtHZ9ogqTtidSsZ2Nk2Fo2Fo2Fo2Fo2Fo2Fo2Fo2Fo2Fo2Fo2Fo7PtGwtHZ9o2Fo2Fo2Fo2Fo2Fo2Fo2Fo2NkZVnRJaNlZNhaNhaNhaNhaNjaNjZNjZNjZHwyx91Cr4/iXw+06R1Sz5arhUtPQ3pvUN603iG8Q3iG8Q3jTeIbxDeNN403jTeNN403jTeNN403jTeNN403jTeNN403jTeIbxpvGm8abtpu2m7abtpu2m7abtpu2m7abpo2wxSepFMTwvgeIIVfH8SeH2nSOqWfLeKKpkyZMmTJkyZMmTJxHEcRxHEcRxHEcRxHEcRxHEcRxHEcRxHEZOIyZMmRFIpVYKjLEU0awyoIVvH8SeH2nSOqWfLeOFF7uflkyZMmTJkyZMmTJkyZMmTJkyZMmTJkz8s9zIilaThfqUfFAg0reP4i8PtOkdTs+W8cKL7Ogw8yFBCt4/iHw+06T1Oz5cg4UX2dBhB4EEK/i1/wAPtOk9Us+XIOFF9nQYQL/BBCDxazE+VuzskkT4vaNI6nZ8uQcKKL7Mg0hX+CCEPilUR6DeF7dWopX9n0nqdny5Bwovs6DSJf4oIRr9ZVEK3m6un/zfZtJ6na8uQcOF9gZFLIbOybOybOybOybSwbSwbWwJWnGRSom0sG1sDa0+X15lGVJlIYWxJq7s0F9m0nqdry5BwoovratJ8xDWhgR1iM3LDcsNyw3LDcsNww3DDcMOew3DDcMNww3DBbCDpFcal09fZtJ6na8uQcKKL6zT6iOJpuAfIrlyZMmTiOI4jJkyZMmTJkQ1H+gvs2k9TteVIOFFF9XUh588r+Bir6FDUP6C+zaT1O15Ug4UUX1eltxFYdl6/aTvoah/RX2bSep2vKkHCi+so/1Hr9V78bHyDaM6iac87OOzxdPcOpToPY5nzQv/ANJfZtJ6na8qQcKL6yiv+rJ+V7ifVYdPkeRU4YxZGNFstFtG6U3SiWhLDFGva4kqQvJaMjT8Lf8A6S+zaT1O15Ug4UX1mnP/AI2E/kvzq03zkMMVdsllEHyuccRkyZMmTJxDJnNGWEUlijmbq1R8dT2bSep2vKkHCi+siesci4kY5MKU6BLMkZJKr1z9nJkyRyqwilR5qujpIKnsuk9TteVIOFF9bBLyx2HJRp8ssT8IrjP3ciOIZuI1nTNynsmldTteVIOFF9do9ZSzNwCr9ipWbKy5XSHv5EUgl4jX6HsmldTteVIOFF9bSr7meV6RRuXK99qK4pora15qurrlv2Guwsb0kZqtPZ2vYtK6na8qQcKL63TIORWsycb170MbpXRVY4zJkyL9UmpsePa5ju6hBJwu1iruqXsWldTs+VIOFF9ZQh59u0/hicveT6rDGkMeSS8iG8lEuykV1rjJai50XdQRSB+WavX21/2HSup2fKkHCi+s0SP+F12ZF71BM2TUH4j7lCXia38y45vdQqu/l8SxcUHsOldTteVIOFF9ZpzOCjK7icve05f85qLcs7iOVFWaRU7yEbsO1OPm6d7DpXU7XlPHCi+rX8O/hC4XvV5OVMp/yam5BUwv2kGjP5s/HsOnO4NQsp/ikHCi+rTxWfLcL36tlEb8l/kj60Lh9JSRj4176DSDw2UxZ9hqzJbpzNwrhfWN8dnynC/YimfEMuoNmid88/SzWwneQaQeC3/b9h+Gb3A+zHxD2ioYMGDBj0/4JvrG8UX7THuYRXFEXKIuFtx8ubuoNIfoj14n+woaRq7bCSwo4khVBWHCcJwnCcJwnCcJwnCcJwnCcJwnCYMGDBgwYMGDBggXjgeL38L3qD/lqH47qDSy/lVvZKWsWK6Q61Ueb+mpvKhvKpu6pu6pu6pu6pu6puqxuqxuqxuqxuqxuqxuqxuqxuaxua5ua5ua5ua5ua5uK5uIDcQG4gOfCc+E06Vsle03Eqi93TscXEpai5UvcoN+WoL9e6hXTL9ck4KH6F8PzcFu43LXC92vLypVHo17X1HoLDIgkUijKr1VqI1v0RJX8yTuoV0w3XpuO1+hRSOikY9lmCRuFXvQWFjGPZJ3ZHtjJ51l7yDEyr3tghkeskn6H8PWi3GOF77ZZGkDlfDO5WQumkd9hCuzCa7Z/RWOcx9Ky25Wnj4HL9iouYbi4h76EMfEt6ylSByq536Lp9t1OdFZYhljVjlTvoqoKqr30Qij4lkkZXhuWXWpv0fTbzqb2rHZhmiVgqfdRCKLiJZI68V62+3J+k0rctR9O3DcZJXHMwuDHfwYGsVVjhRC7djqJZsSWZP0tqq11TWHIRyQ2WOroOhchgwYMGDA2JyjYEJpYqzLerPeL+ntcrHQavOwi1as8ZNBMclpyWHJYclo+aGEl1auwn1ad45Vc79Ua9zBLU6C2Z1HOc7/AMkv/8QAKhEAAgEDAgYCAQUBAAAAAAAAAAERAgNAEBIUITAxMlAgURMEIiNBgDP/2gAIAQMBAT8B/wA+V100KajjrRx1o460cdaOOtHHWjjrRx1o460cdaOOtFu7Tc8X6L9Q/wAlyPo2I2I2I2I2I2I2I2I2I2I2IX8b3UicqfQ1/wDR9SpFvxXoavN9RlHivQ1eb6jKPFehq831aey9DV5Pq09vQ1eXVXbNbgqqbxuaLdyeTxq/g1i0uVisdJHRkklEolEolEolHL42/HGZLJZLJZz6kEEaJ60dsZ4y0o7YzxlpT2xUPJpcPEQ8GTcbjcbjcbjcLviIeA30ae+Ih4jcG+k30kzpT3xEPCqrSHcb0gjRXGi3cTeIh4DRXV9EEEEEEEEFm9/VWHSPArcaRrVyRTzWkEEFmueTwqR4FXMgjSqp/wBGxs2NFNX2QQQU8nInODSPrser7FK5kEDoIIIILfbBpH12MjSDb8I0ggowaXgvSCCDaQRpGkFOEqiV8oIIIIIII0a+EEEEEapC9E18YI+KXo6efIaII1fwj0q/cNEEawQQdvTKtPubPo2kEEG0dX16hNoV1n5F9H5F9DuMbn/J/wD/xAAqEQACAQIFBAICAwEBAAAAAAAAAQIDERITMUBRICEwMhBQQUIEFCKAcf/aAAgBAgEBPwH/AJ8SMDMDMDMLMLMLMLMLMLMLMLGrfRUodrlvHOF19FS9fI9B/Q0vXyPQf0NL18j0H9DS9fI9B/Q0vXyPQe/sWKPr5JaFixYsWLFtxTpfkUURR+X5HofgwowowIwIwIdNMnTw7aPsvlCXxYsWLFixYsW+GvBNXQ1tEPuynXWk9TMhyZkORThyZkeTMjyZkeTMjyZkeTMjyZkeTMjyZkeTMjyZkeTHHkxx5MceTHHkxR5MSfy9Ceu0QvZGBS1MmHBkwMqBlQMqBlQMqBlQMqBlQMqJlRMqJlRMqJlxMqJlxMuJlRLuH/nwyeu0R+yFtWrlLj4qa7RH7oW2hq/ipF4h7NH7oW2S7i+P5EUPZI/dC2DaWpmt+qMdTgx1ODHU4Mc+DHPgzJ8GZPgknZtj2SP3QvPoKOPu/DP1Y9kj90Lz1NBK3Q5JamdDkzociknp8T9WPZIXuheea7fNSso9hupPXsKijLiZcR0kXqQ0M5STHskL3WxSKlVyeGBGmo9coJjTiPYoXutjXqfpEhDCuiq7LsUndd+iUbjVtihe62DdlcpLF/t9E5uWgqLHSaITa16Ksb99iiPuth/IdokVZW+Z+pFf6XzKnfoauiWuwQvZbCv3cV0WuONuzFJmNdVVd9i+SlPEvPW9o9WBDgxdtDXora7KLcdCNfkzkZqM1GbEzYmZEzImZExxMcTHExR5Lx5K9muwu6v8t2VxSv8AL1I6dFZ/62dy5cuXLly5cuXLly5coyurdFrF2XZa/RN2RJ3d/oqU8LNehi6a9T8fSUqv4Zr4Kta3ZDf0lyFaxGon0uaRUr30+oTsKq0f2Gf2GOtJjk3r/wAn/wD/xAA/EAABAgEGCQoFAwUBAQAAAAABAAIDESExMjORBBIiQVBRcZKiIDBAYGFyc4GxwRAjQlKhE2LhNIKg0fBT8f/aAAgBAQAGPwL/ACNQ8/Khfcc+wLKfFcdsipjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbypjbylwaLjftfN+UWRGlrhSD1DLoglhQ6RrOpTVlWKrOvVZ16rOvVZ16rOvVZ16rOvVZ16rOvVZ16rOvVZ16rOvVZ16rOvVZ16rOvVZ16rOvVZ16rOvWXOEXsHzmCVp1jV1Dl+55R6RsWEMFAeZOoUPvO9UekFYT3vYdQofed6o9IKwnvew6hQ+871R6QVhHe9h1Ch953qj0grCO97DqFD7zvVHpBWEd72HUKH3neqPSCsI73sOoUPvO9UekFYR3vYdQofed6o9IKwjvew6hQ+871R6QVhHe9h1Ch953qj0grCO97DqFD7zvVHpBWEd72GnpmuuVR26qrrlVdcofed6o9IKwjJNbV2Kq65VHbqqO3VUdulVHbpVR+6VUfulVH7pVR+6VUfulVH7pU7SNo0gImFksbmYK38L5cOGztzquVWKrFUlDaUekunNKrFViqxVYqs5ViqxVYqsVWKrOVcrLhMP7mzFF+DExWfb9Q/3o0YXGHhj3WK2spTyW7Sj0l+3nZQpHUp2FQBJ/6NHrotkNtLyGhSMGTDbIOW3aUekv28/PPmPaokIVRO3ZorBfECfs5bdpR6S/bz5HYsHfraW3H+dFYJ4g+En05jyhtPSn9AwX+720VgniBAhEESjOCvkvGxys5f7grLiCsuIKy4ggDDn2hWfEFZcQVlxBWXEFZcQVlxBWXEFZcQVlxBWXEFZcQVlxBWXEFZcQVlxBWXEFZcQVlxBWXEFZcQVlxBWXEFZcQVlxBTw/yE4iFxBWXEFZcQVlxBWXEFZcQVlxBWXEFZcQXzIb2+XLwba720VgniD4TKeR21Ts/KqG9VDeqhvVQ3qob1UN6qG9VDeqhvVQ3qob1UN6qG9VDeqhvVQ3qob1UN6qG9VDeqhvVQ3qob1UN6qG9VDeqhvVQ3qob1VN6qm9VTeqpvVU3qqb1VN6qm9VTeqcXapZMV33NUj/ACOY8nBtrvbRWCeINGTUakQ6dp/CLHX6+Rg213torBPEGjewrHzs9ORg213torBPEGjiD9TZORg+13torBPEGjmcjB9rvbRWCeINHN5ED9NhdJLR5KwevmMczvDRGC+INHN5DVQiKRnBQiwrJxkk+06HwTxBo4chvwao/l66HwXxBoXIhvdsarB6sHqwerF6sXqxerFysnIZDlYuVk5WTkPlOU4DdpU05zlR5KJPfQ+C+INBhzsiHrzlStaJfudOVWJVDlQ5UOVDlQVQVQVQVQVQVQVQVQVM1TqNs99D4J4g0EIsUZP0t19q1uU56DG2e+h8F8QaBDTVpdsU1ObocbZ76HwXxBoF7/uMly2dDjbPfQ+C+INAwv8As6PMZDXO2BVQ3aVPEbcrXhVrwqaI25UB2wrLa5u0ciLs99D4L4g0DD7JkeTIJypYh/TF5VTGOt06ncFMCqoVAVAU7VOCpiFUxTrbMpYZxx+VIZiov/Z9D4L4g0C9nmpdfIxjkQ9evYskSa3FZE6nPMzFZUyyhLqKiluW2TNofBfEGgQ4Kag0fHHwgT5mf7Wt2pTnnZlqKMXBBI/PDzHZobBfEGgpDV9F7r9SJXzDUsVlOvV0GR1KMaAPnikff/OhcF8QaD/WfV+ge6xW1vTmcd8smYBBzJcUzT8zIaUcLgjxB76EwXxBoIM+ml2xTbAOZyQTsTQ4EGelSNBJlFCyptvM/ghFosnZTNmrQeC+INBCWu/KcuzNy8Vn/wAWVlu7eRPOO1Sw8h34WK8SHl9icAPmMym/60HgviDQLGmrWdsC7XcuQUlYg8zr+HyxL2lUtuX0nyUkQYvbm+E1cVeYGsKI0CRjstuw6CwXxBoGLF1nFCk1csftEvwawfVOeSYZ+mcbPg/Foxjy5NahRs7TinYdBYL4g0DB7RjHzROvlu7nwY/VMeTKDIVIYj7+YBWEN/bjDyn0FgviDQBUn2tk/HMNdmz7PgQRKDSFLByhqzqQzHt50A/UJFJq0DgztURvqj08bVE5kQ4tGZ2r4yOAcO2dVS3ulfLeD2GZSPaW7eaYow1Pd66BmpUOKKIjent2hROayDNqzLLZJ3VNEHnN8ZDONRRfCozt1cyxR/Ed66COCRDM4ys26ljDp79nO5Di3YpIolGsIEGUHP8AA4tU5Q5hic7WZdBtg4ScWPmdmf8AyppiqOmwzraOZoN3Kez+4fCEdo5iM/7WHQoa/wCdD1OpHmssvhH9wl9F/Uwd5f1EDeC/qIG8F/UQN4K3gbwVvA3greBvBW8HeCt4O8Fbwd4K3g7wVvB3greDvBW8HeCt4O8Fbwd4K2g7wVtB3lbQt5W0LeVtC3lbQt5W0K9W0K9W0K9WsO9WsO9WsO9ZDg7FMkydfy4h+oCZUoyVTO3kvfmkk+ENvZLywi3PEcG+/UN0I0RR+R/xQd5csOzUFSicLFeJvRZBDxcVPDfcqj7ll5AQa2gIl0wCLjn5cutNhCiGJ9p/4dQ2xGVmmUIPbUiCUIg8uQzs1LId5Z+TlnyzqShurlyJz3VGCVOe+s4ynqI7Bnn9zPcLHHnzMz3IF1M6Lm0yhTvdzOMhgzc2U/2HUVr2GRzTKChEGxzdRXZm5mTOCpNZ5mehY/1mZg1lEuMrjOT1GxxO0zObrCDmnGY6cFSHmJiQpSZeY7EXvOKxqL3zZgNQ6kSVoLqzfcIOYQ5hoIXZr5+U0LHiHFYFKZmCq3V1KlhmVprNNBXy62dhpUrLlPzcyylIcqJmYPfUseKZdQzDqYC0kEUELFwoY3720qWG5sRvZmWSVRy6FlKWK4MHqsXBh+m37jW/jqhjMJa4ZwvmhsUdsxWXjwz2iX0WRFhP81UVCoVRZcWGzzWRjxD2CT1Xy8WEOyc3rGcSXHOequQ5zdhkU0eLvlTx4u+VlOc7aZf8SX//xAAsEAACAQAHBwUBAQEAAAAAAAAAAREQITFBUXHwIGGBkaHR8UBQYLHB4TCg/9oACAEBAAE/If8AngjYiiCCCCKI+EvoTLEy9C0gGPEn4NV7Gi9jRexqvY8F7HgvY8F7HivY8F7HgvY8H7Gi9jwXseK9jRexqvY1Xsav2NV7Gq9jxXsN86riTySof4OEoa+B1NYNll1+hSlBtYsBlXwnB5oeSHkh5IeWHlh5YeWHlh5YeWHlh5YeWHlh5YeWHlh5YeeUOKuG3l6E9qsNTd8DWhbXXwhEn3jY/RgAAEExxzXfEpaUQwTrX38DA65jDZJJJJJJJJJJJJJJJJJImJ0X534dA+AioA66g6JJJJJJJJJJJJJJJJJExqHWfh0z4GYddQY9mSdudlUnXfh0b4GYddQY/RKk678OnfAxDrqDH6FCpOqOlfAxDrqLGP0CFSdQdG+BmHXUWP0KFQtnUHTvgZp11Bj9ChULZ1R0b4GYdRQY/RKhbOqOjfAxDqqDH6FCpeuOlfAxDqKDGP0KpeuOlbBBBBFMe55iiWluc86PLzyUVpNNO8HVOgx+iVI/MGQmppYzuHl550edU6CaA/DRH4aA/DQH4ag/DUH4dfoRbZX7e4hq6k2ejF/hqW4usxDzPITz0d/uT2Z7h1ToMfoUKkatmKdq/g81F5MXmxebNUzVs0bNGzVs1bNUxP8A0kYm7yLiv0T0NbZVGl1e72xE7WuH7tY5k15p4f0cxjbd7oHSJ9Vedc6D9GhUGrZmhYIX+f8A9GdDTxRKVVdeJWClWpVl/eeI/auuBQ3BVGRHcqkO2zbljjDYww+jvOuoP0aFRevmPpYITJJJJJJoSSSJjUFgU1gxX+mrMda7cB+0IWVvWxrh3upaosNjoPqLzqqD9GhFsetmNrYITJJJJJJJJJJExMchxgQkbX3MD9oVA2k4NSmoaJ2ltxl3pmx0H0l49fMY/RoQ5XR+Z+IkkkkkkkkkkTExDj1MmdZ9Q/aFQN2MLMRxWfvS1iMNuJrrQm6lyd4ev/o9f/R6/wDpH2RurfZjrRqZj1n9NDumj3TR7pq901e6avdNfumr3TV7pq901+6afdNfumn3TX7pr901+6avdNXumj3TQ7ok6P2PlRqxJOib01mr3zR7po900O6andNbumt3SDR+xTKTF1OYnVUIQqNjkzXcA/aFQOxzHyM01ej6+IZC94fyPZaXuc+Mnip4yeOniNEPEDxE8Roj4ieA0B8QPADwA8AoB4B/sgAAQpSlKUITxQs5mCKCPrhtzVjIx1Ox0cBUtjkzXcA/aFQOzzLY9Aw/ZH/gAAF1RX9abzWCquqbuV+7VmBc6WzyZpOAftCoHZ5lug4w2Nkk0J9WAAAATQkkkVAgE3cMjlVfXmt6w6RqmTNZwD9oVC7PMt7CbGySSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSRMYYjGU3FDylRaoV9bUH7QqN2eZaewmMkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkTExhqx+UWVRaqPOsqD9oVE7PMtbGY6JonYkmiSaZJJJJokkkkkkkkkkkkkkTE6DV0HZVFqhJltPBUPEodRnyqH7KqH2eZbezjH62diRCYw9dG2aLVBNreLXh2mGKpSuRAWJDUqfsyo3Z5lp7GY6H7AmSJjDV7GkClVxDEmpcchFcrEyziP2VUfscy09iMYx+rbhV1FeLsWQaFdzUruaBdzRLuaZdxeE7i8D3FLej3JA6QvG9xeL7iFbpi6LOQ0qnH8kMMpLXVSINcONT2YqP2OZaezjofql7M1jLkL9KiG84/wQtyKk1yNcjXI0yNOjXo0aNGjUo0aNGjRofgzvplrqsFYPyX09lIVG7HMtvZ50P1KGWtM6m4TJLsEmc2P/DxW38Y6d9KDH7GqP2GZa2cdD9RcGaGdhdxWEwJ2NkkkkkkkiYmSNkkkiYw/IfQtD9jQqH2Ge1x+qx85L+mTCuqDDZJJJJJOyewqHRPoWhj9iQqD2GZa2MxjH6irvE31Ezt4w3ROw067Ft6XcXb5MxJe+uY1ubTMv8AM2RZut3jfplQqD8t9KDH7EhUHsMy1sZjH6mfOcjZUVg6DpRpQ2WJKWyKSwPwuK+UDSuKqyCrEbV0GXcw8LQuAcGWQOoihrcTrcjQuJ1DCs/ohsQ0WpqGhuQvpQfsaFQewzLT2Mx+qrzc4/TIMKgdEFmFV5H6NUWMVvNlTJmdhbu1hcPaQRQt4jB1oq9ZYqwQosC61kyTyFWlarVq/RjH7EhUHscy1sZjH6mtWi1Yq9DqNprGGMTtGKUTLTLFpcVV2GZNJsFchiSSSSSSSaCCLqtVhcyx8kRL7dFX4nusYxNpppqppqGhj9hQqD2GeyTH6t7V7cRTnJBUUzrc/orbN/RaTDEkkkkkkkkkkiYhEyr5Z4iITRkA1XWmmrmMfsCFRewz2SY/WOrj2961ESata9LaNskkkkkkcG1kMRxEDkiSaYZJJJJImKhxZ914k6ri6148xj9hVF7DP8LWwmP1bq0S1qu/qwU4pVQrF/EPY25btY2SSSSTQyhruST6VUSHaV2aoSRWQjfBIJJJJJExMchpw0VxSd4sItu0dFnYfsKovY57JMfqnUpZU7HCMFwX6S7VmrIMNkkk0Q8l3t2Zhcmm+WrkVFCqWCpGUSrASRE8mvdh7gNxJImJiYxFzaqZWBcfat4l+Fqkfr0Ki9nnsgx+qQjyr0G+ETldx3oGxskkkVoTLISxYjVrtxhUTbaSVbbuHEdP8hvsRkoi63mFgpHA5/iglyS/b84kkkiYmNROcm4Efw4JwcofsCovZ57JMfqomFWjKVb6tcjctY43jjY2SSST92M7fskffw94ldzJJJJHNEv+EM4wO27TKSSSRMTGInwCE1W+cLquo/YFRexz2QY/VRR280T2JBvSMNj2KovbfaJGJrHe6mz6JJJJFJpFjTgYGCdqbkkk0JiYxuqckRqWnzKj6GP16ovY5lvYDHsx6TphJ0/ihTMexM9h8y0qvHeVNCShl4wbN/dXuOjXgJDpkkmmRMQwwislK4qCIcAfsEpWSugk3LErYlFBoaIIIIIIIIIoggimP8VlOKLqP1/st0GPYkehC/yPcO53Ox4kjrcIKLCZ0VMtO52fYlCHZC3J7MiExhqx+n9iltiXUP2CvcuFhAW9zv6yManahBRoaIIIIIIIIIIIIIIIIIIIIogimroq0amZboMezJU0OLXyDNs2LSuTLFrw7xDibsSSs6k21EpiZ3Cu2hit2yhULRrZjy3H7Y/YUxFO3df4rc8yHe3kVEww6RBBBBBBBBBBBBBBBBBBBBBA72FZY97P9LVI9uSRjLDegQa3CofK8QhkpSXj0NOtClkhMOCd3OdhCpKod0EsX3M59iZppptNVyrhZFFTKux9iZeQGdbUDL9TAAP4c01iT5juUCw2ndQY9loUtC3ttMrbIyHYyRd+7T2EKgstLGoTivXKoShJYex2oZUkVJvI7pEuQIXORcW5ovsfoJksiiiDPvvNFFAAKPHDx48ePBjwYf8AIj/mR/wI/wCHH/PnhJH5baUxNaN1HU40zHSuCnJLrEt2nuZAk+sw4bLJukObr/BGTGbj42EKhkKshX6Aq30vZpJJJJJJJJJJJJJJJJJJJJJJJJJJJonhcecugiK6sJQY6Zol2VYEKmJlaavQ1zraxbFDic4dBlljjLAdxnWxrfIR3Fl3G21ClsfVaVSwVy2EKjOFMTu0+ntSSSSSSSfRsNhfOQ43kSez+hluFUxRjHTVd9TISVDeKrkHKtJaJbvEsBPUp4K+QZVI61+3sqg9aWsvo23xdx/Rk0sZz+CQXpOs48yZcDuEEGPZSQosJkbNLOtG8bBECYkRRCwTj62kIUrBa7MiZu3MzQ+XwV6FYhc0IgSb+8LK9D4rWtCDQ0PZW1bVK3MSl7Vxw20hCuLG3eNrQ6w6IQ2I42LW8fg0MXrIvVwq2nD1aPHAeNA0NEbDmXGKcDGU2Lc0QQQQJUDMJLWdaUnuWLZUVL3VhfCGxk3N6n9n2aZrrB7htXXcoLQ0QQQQQQQQQJUDbhjxH+wBYt4JXszT1q7nv+FQnaCb940SiGHd1vQp/YGQI08BliCCCCCKCECRtlaRbwuGSxa1X2CuLKpFScEvhjQrSxDT3Ea2uF1K/gRPzizK1DlfAZbbxiqxl7Eo4NW+oUtTuRgQ5X5FayQY4ky0Yzbbbbbctu/4eu2GHw1xI9Yj+yuxGcinPsEvIFnlaNnYmPE82bzzYkdyF3Ams8kWEy059hNpdOy/ENFoRkt8fijh2pM6039CwnoxLXOjE67H9hQrEll/ySf/2gAMAwEAAgADAAAAEAivtnjmnktrlvvjvvvvvvvvvnuvvvvvvvvvvvvvvvvvvvvggususgsrlKMuPvPPuvPPPPvPLPvvvvvvvvvvtvvvvvvvvggpgkkglosKIBqDIENHPOMNHKEJEPPPOvvvuvtnvvuvvvvggugoAgggAIAAEAIAAAPAAMMAAJAPPHMIMOMqtvvvuvrvvgAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAFMKAAFPqnvtvtgAAAAAAAAAAAAADDDHLDDDDDCDBAAAAAAAAAAAEHIgoliooAAAAAAAABNPPv/AL7LPPPNPPLfzzzAAAAAAAAAAAAAIIK4KwAAAAAAyTz6M0GHPPPPPHPGE1PL7zzywwAAAAAAAIIAAACzgAACzzzzgNlcpH338/mfPbJJmsL7zzzzyhQwAAAAAAAADywAAjzzzyJ1Df8AyuS8w9p5MkUwZOSQw088888osAEAAAAA8cMEIc884Gp7GH9YPPCG6qE5F8n0KCCAw48888YEEIAAMA0888884ACeFHeGtbLh04USmvmPZIyuuOKAQw088888csMc888884AG+gL5R6U+U8xVppWy/RFTMIAy2OKAAAU88888E8Q4884AC+gfIbaHhnlR19gqWF7akxP7z8Iy2OMAA8888888AQ4ggG6E7bGpZGIwb3OOe15aUIUT9PT5X0IS+IAAw08888AAAACeEnh05io1R3PzDLz6IZv5tO9qVQlp6ISuIAAAAQ88AAAA+q6nGXSxLkoSWiO+uUpZCl5jns+d8/N0s2+AAAAEEA8MM+6UXbEg5mu1N5YlIAAc4wEMV4HAXYNoPP0C2+MMAAAA88++CcJJ4ltck3+eWvazzviKq+6Z7rS4C+ZZIoS++4EIAA+++iG489M6EwZ/CiX498stPHSC0w8aGy20YHi0KS++8sEASCCCegwDpwRBME1I9oDfPPPdpVtowK13xOalbI0KC28888CCCW8WCLwsZBWmi2P2OKCCymOibbjjhsbnRqdmQ+KCSw88uOO+o6+zFxhV8+bGxF5lEMM8zhUU0msKuZfOP7o0+CCAw8u++6Aq2B4/MpgwlwNxvOKCwR16Do8kIg7Cq/YF0A2+CCAA+++iUqCdyGIUUwreDXDBU8+9jGCO8UE+gLAY25YsC++IAASyiC8WmgF4Y8ECr2I1tJCy8J+fbFH1QCk0Bakfn0KW+uCASCCG4W8EGbUoUXnbkITztAy/cZutdHcUba37JM5A+Cy+u8CCCeoqw+6P9MU/WpR+qBR/BVRo9eOSyP0OUnAGNq0qC2++KCW+AqA6tlZ0pmv2tJy8IStDtSDNePUUh7HZyDOfI+iC+++e++Q6AinBltNMn7gNzHZlaqGt993f6M20H1Y7YhoWuCCC++++U+Eu4QtJsVELXpVuC4bZcCZyaYfn0bf83x2dsW+KCC2++iUWiym8cQAEnbsUpfHmo2pFkPy5Sld0GPRSC5UCy+KOS6yiUCOcSBJxIVUWqbYYchz0D+DEm9K7q3KbY0e9QqC+++S6CCUIoIEeiZ3gSZXROx9C3UYx4pPnlZHlxwsJDVQsC+++CCCSco2S2kYOgGueOOOOaCsaTO/MIqqjRIiJwztUE8KC26qCCC88SsmoWoQwy+u+++8cIG8JbdJ+c85/pD7nSeA8uCCC+OC++sASuYwOeyyywwwwwmOk0BgzhJ5k2Ub5yoo+A8+KGC+++++uAA88OCCww48c8cMKSsmQP4NHb+n6TakUS8AAy++++++++KCAQ088+qCCCCiSS88ImmWSoMMhqbWEqoW8ICCy++++++6iCCAc88888CKCCCCCW8IuQmsCyiUSsqcqE88CCC2+W6+2iCCCC888888IAAAACCy+8A2eKAwwOSgG+AA08uOCCCC2SSCCCuee8888soAAAAAACS+uAAwwwwAKe+8gA8+++KCCCCCCCCGOe++++84EIAAAAAAU+++uOuuOu880gAAU2+++KGCCCCCGe++++++4wAAAAAAIIc88888888884MoAAAy+++++CCCaO+++++++6gAAAAAAE8888888088888888MAACSyy++u+++++++++SCCAAAAAAgU888888MY88888888wICCCCC+6/8QAJREAAwABAwUAAwEBAQAAAAAAAAERMRAhYUBBUFGRIKGxgHHR/9oACAEDAQE/EP8APlVRDT3fw538Od/Dnfw5n8OZ/Dmfw5H8OR/Dkfw5H8E1p4JrGxsF6DgOA4DgOA4DgOA4DgEadpoUpO/gGJ9X/RIhCEIQhCENg/SX88Axfu/6JEIQhCEIQgux+ov54FfoxIhCEIQhCEEP0F4Bi/RkIQhCEIQhBo/WXgV+xCEIQhCEIQhj/wCdfSi7iEIQhCEIQhDEUpSlRengrGGiGtyEIQhCEIQgkVjpuRkZGJ7iGt0ylRCCRuEIQhCEIQhBLcaIQhCEGt6S30qbHcRQkNGxsVFRV7KvZHsj2chyHIL2D9hyHIX2Kngg0NGDpexSwMGDBg2Kys3Nzc3IyMjIyMooojHrZ6Mx9KsCjQ0NaTSEIQhCEIQhCEGjAZh6VY0tDQyEIQhCEIQhCEIQhBNiDpIJ3pMBRoaGiEIQhCEIQhCEIQhBY0Y7pDDSxoaIQhCEIQhCE0aoggggUaj1BdHhpYxkIQhCE/LtIhCEIQmmIXR46GNDRCaQmkIQhB4IQmiMmNXcXuEmD0wC6PHQ0NEIQhCEIQhCDWxCGw9zFDTZRRGjPiEsMQuixEGNEIQhCEIQhCE0I7Bs8/kBilgbf3f+ifRYCDQ0QhCEIQhCEIQmg1dEIPuIaDZPwE/eQuhwEGiEIQhCEIQhCEEoYYaGHBnMzkMs/AKUghKuhxEGiEIQhCEIQhCCbCDQ0LuIpqUdX4g+ProqDQ0QhCEIQhCEIJsIMNDocCqybE0TUWXoYMao0QhCEIQhCEIQmwg0PURp4k0QQWdFPZlDb2ReyL2ReyL2R7I9keyPZHsgjRNJoaJ+AQYgkUEngU4zvDQ0Ql0otJKIaIJHe8HsURHoQS3EjIQgqGpt4NOOkLyNWR6EJqK8Di+FTadQshdb7hss6id4Nu7ELYW+HwjEsqlsh9oNYGZP/J//xAAsEQADAAAEBQMEAgMBAAAAAAAAAREQITFhMEBRkfAgQaFQcYGx0eFwgPHB/9oACAECAQE/EP8AU6EIQhCEIQhPoSGPJGxwwqqpmon0BCMz3I6EREREREREREREQrIGvoCEycRRqY+fQmUnAmEEGpj55CNEhCEIQhCEIINTHzyEjTIQhCEIQhCCDUx86kJCRpEIQhCEIQhBQmbGiEIQhOVQkJCKKZCEIQhCEIQgmYeb1AYaJyaEJC5QkIQl3iEIQhCEIQgoiaDB+iAWDsy0Gh8khEND2EhLBnMnCAEMg9hr1JCDg+SWBGhIeWkF0PdC6HuhK5e6Nn3Rs+6Nn3Rs+6Nn3Rs+6Nv3Rt+6Nv3Rs+6Nn3Qn+3uh9F3RsO6Nh3RtO6Fkk13IQXMJmGPkViUWSi/7mbHyza+WbXyza+WbXyza+WbXyza+WbXyzb+WbfyzZ/Zs/s2f2bf7Nn9m1+za/Y2CbzzCaaqEyZqjHyKwItPqvHQkYzjb2GsmJnGMfILAg08jCEIQWefUhYiEGPkFgQaeNCEIQhBImzEJlCJ9RB8gsCDTxoJCGsPIU889zYefk2Hn5Nh5+RdN5+Rv9nn5En2efkb/AGLz7jjmuYHyCwINHGg2krHN7ZJkvTMGL2MDHx1gQaOMj2SBIhCGtkhr/o/4E/8Ao/4NXJ4J2HgY+MhYho4yKBZqjQ3jNmoo88zEdczYNga0FqFXnmQkp5OMQY+OsQWnGQsyWR31vzzpv94IQhCEPvo8jEGPioWKLTjIQ5TWfnmwiSIQg/PZjc9mQhBKxj3jGhj4iFii04yEubRDGeq/P6xg0mRDKshm0o1j1DRCE0DGPiIWILTj5L1f9kfox1BWYQhU2vcSihCFBCxhj4iFgeEtOP8Akn8DxaJGMYEsnmJuuRqqiYQSJFj4qEexPYTvkIQhCEIQhCEIJGb/AMD9DSajH7WQlpmU9CaSrCCR/wC4x8VCEx7R0Qn+3yedPOnhTwp5U8qbnyLrfJufIuqu4ui7i6buTW2aY0Or0AsjRMFVCZfPfCGipSOgx8ZMTExccAAfYw8Gk1GN9QiZL2DJZLBCc4awPkKUpSlKUpSlKUpRPAU0lWNJ1J1Ljoqyzn8jHyVKUpSlKUpSlKJiZME0lXqhpmxXWDHmxv6BRMTEHaxHRK6EISaiusbkLdzG/oaYmJjWqeDJH/R9D5NMyGFYbG/otKUpSlKX6RSlKUv+c//EAC4QAQACAAQDBwUBAQEBAQAAAAEAERAhMVFBYXEggZGhscHwMEBQ0fHhYHCQgP/aAAgBAQABPxD/APCr/wDRPr/73UrCsalSpX/I1KlSpUqVKlSpUqVKlSpUqVKlSpUr8+dgwqVKlSpUrBUqVgrtArBUqVEiSpx/4AgQq022PfIU5kNrnLrh/AUbcvBz/Nz/ADc/xeH7n9rv179+9f5+c/Dr3+bn+Pn+Pn+dnL9vP8/LW0bvdJvc5W8wHUOszcnBHme/HhEj/wAAECWMRadbcyUcQDjCoFtNBpb7EVJ+VTwI/KvWfCvefLvefLvefOvefPvefOvefOvefOvefOvefOvefOvefGvefGvefOvefGvefGveHxr1nxr3nzL3g2wnr/cE3vWvec4lW3USLW8RLdjyWalmjnH8+QgkF1VnofAHxiL8WHQyPTHGGGOr6DXrhgkEEGI62G650HTUjzBg0VV3AjGP50hgYvkcZmYDDD9T/wDJJJMZPOUYcqY/njA6jl4z1izjix+mADqxCCDECzI4maRMY/nCEI5ZeM9Y4oosWLLxLly5cuXCLgwYOcUUeZFhxJjjX5gwIQwW8w9Y9YoosWLLly5cuXLly4MuDBgxRaR5kUDPEmP0a/IHZIaTLLeYesebjLFiy5cuXLly5cuXLgwYo4tI8yfI5YMmMfzpDA7zz1i1xlFiy8bly4S5cuDBgxZxxR5x18mmDJj+dIQwefiPWLXCoxwvG5cuXLly8BgxRx5zQnxuUMiSM4ypX5WuwQIEMMvPPXHUYxYsvsXLwuEGEGKKLOLJPhcsYSSuzX5OoQgQIEDKGW8w9Y8Zixxvt3L0gwYYiyR/FthCSVElSpUqVKlSpUqVg4OD+IqBCBAlZYfeaesebjMfrGI84syfA5QyKokSVKlSpUqVKlSpUqV+HMKlQJUCBAgSssH14j1nH2Ix+oQg4moj+LaC4EkSV2QqVGKiRIkqPbfwBDAIECWCWC9LauczDJPEIfNfSVa/L5R4vx+U06Swj3GfFbzjxmMfqEIYjzlHyaRI2AiPPCXafL5R+K+k+a+0+ae0+Ge3ZIQKFC3CDA+y9xPMhQtAOI3EiSpXar8AQhAlQ6XlCF0WlDlT0TIQdGeaz34y34gvEOXhwm4CGmgh0ErbuF87jOPGfrEJqwKLMlXx6RpkZgutELEQIgYMs/zJP8+T/Pm39OHf82T/ADpyhAdtI4FmmeC3zdIeCURW1QMgch5k1BKR4xIxjH8CQhCBBCCEYNlqlnGkTmHZMtyNfM5efo6zUgslr3xY+8WLnLHjfyOLOPAxj2XtkIQwOLOfJbRweSDVrBQcHB7y+8G8YPeD3g94KJvBI3olMvwcPyF7MCa0MELmRo3pgIkY/gyECEWSmq6oQfOVFEV8gQfGvFigkVV1XizU7BGUyiZV9Z6ziwOsYkSVKlSpWNdghDFeco+LSeDsDOeEmGSSQSSYxUTODSSESwJxNkse+DZA11J+SOASMfwRCEEEpY5fS3tKGWg7oF8plUWuBrRx5Mrn1fUes1QRIkSVKlSpUqVKlSpUqBCGK8kr+bSeBsAIIJJJIIJJOwIXgF3eN+7OBNhyB5OCJHsMfviEMHwG7HZrQaIlJGpWL5c8nE75rYs8J84tZSM/iL1jziixZcuLLiy5cuXLly5cGXBiimYSrre0sXcwIMQQQQQQYgczCfBOEzNysExj+CIQwfBbso+aIrQU5QkTNwb5ZjsI4U8y0ToWfeRIBbtPMRlwVSW3Bu1TbetjSFy4ViStRWGu8l5yXmpeald1LzsvPS8/Lz0vOy8zLzsvMy87K72XnZeewqpvpTcysZohJrFyKiGRqvIOMm6hK4pgqaS0jpxZqK1PIRmuU8e+BZ5wEKEeI5RRRx5kXxOEV4AmOD+BIQwfIbsPg/RhbOsJSd8y8EcfMD9Rp1XJ94/wr9R/wH6j/mv1P579T+e/U+ee0+Se0+Oe0+Ke0+Ge0/h/1Ph3tPhntPhntP4b9T4Z7T5Z7TO9t+p8O9p8m9p8m9p8m9p/J/qPyb0n8X+p/B/qbng/1FP0/wBT+T/U/lf1P4X9T+V/U/lf1H/C/qfw/wCp/IfqH+B/UHc+5/RGwWbKPEsjsq0IdQZPg84GK2t1E2eDuszpnFFHnF8ThHeAJIxwfwBCGD4LdmTo/RizTOZzpr5zmxW8vWsXvL7y+8vvF7y+8vvL7y28tvLby28tvLby28tvLby28tvLby28tvLby28tvLby28tvL7y28vvL7we8TeKcYZzB3D9PMipcimhdEeA4PsspgppFD6PXbgicIo8yP4nCK8ETg4MfviEIYPgN55L6M1o9eyCsv39AKAAIkkwmcTKgr5Wz3PvC10y3YB3eYii0nyzhHeAJjGP4Ihg+K3nkvox5o9YotcYYYfo//r+p/wD6/ofySCDAZ5M2hlM0HVCnrGW6oL4R5ko6D6RQiIxjHB++IQhg+a3nkvo4B6xx6xxRhhwGHEPaAfsAEAMAgxBmEyE8IerPLR5ko6D6TUEURIkYxjH70hCGD5LeeW+jNaLWOPWOKLGFwXLl4GLxLl9oF/VAAIMQKZCVdH3Y/AizlfSfSBCDkjmovM2YoWJ0/dCqpyKF6KU+MStYIkfvjAhDB8ZvPLfRwGpwvWKKKLFiy4suXFly5cuXLly5cuXLly5cuXLly8FwYMIWBmTLSoF0PeLJFKeg+kMIX/Eqr7ioaVMCQ5qxIunnGWwUB1qGr0StokYxj96QhDB8VvH4X0cItcPHHFFiixYsuXLly5cuXhcuXLly5cuXLly5cuXLly4OAYgynWUnt+5lCOXDrL+r7MHMg5vgNxWddHClhzYkYxj9ydghDB8dvPJfRwj1ii1jjiwMuLGXLl4XL7F432rly5cCxA3WiGC1xDxJXnD/ADoH+JL+bIDXw5B6wga+FA2sRjJQHBJ8cYCcTWYWQd37QIqrvRWnOE9/hU8R9IKILIgpsHw4wUOTP3a/SamJGMY419yQhCap8Nuzy30Y4cc19irFGP1b7dy5csrNiNc1YDzuHNlsMDFaiHoB0BFcxN4eLU20On7T+J+0+F+0/kftPg/tP5P7T5v7T4P7Rq+bznxf2n8n9o/Je8+Je8oNt7n6Eyvp6v8AXfLIuM2MdYxj90YEIYnwW7H4X0YoLWa5xYrgYx+2Jk7S5U4HG2hx1cqt2mut6dW7ym1Ml4dDQi7y+8vvB7y28tvBQce45IuL3lt5eGAVy/U4jHB+6MCEMPwm7F4H0Y80WbNc14rgYxwezx+tmCqWMmmp1Sd5hAlGUMgGobBVd0ZFVVtVzXBez8kxu5ewRgNKXHH1MDGOD92YGJ8puzyn0ZqZqcLxGMcH6VfSYKppjsX7PCV88D7+czcB7IDNBgxS8opcuDHHHkR9TEYxj92QhifPbzitvox5os3Dx9mHF+zq4AhxXqpLg1U+eILguXLoV0OMoDm6Dx085QpXLHwtG/J/dIY1HIRS1fMyW/n9osBU42V8KSrdRB46ecMy+G+BZkuKLqYMCRjH7shDE+O3YvC+jNaamPPss6xjKj9mwc5xXxcEgXOKecUUWXE33TyOQZsOQvGeSy7z3SnBx1fwcncQzSum7jKZXV7oPeWMr1T+o8Hx37hxX7n9xOL6p6zJO4wTN3ONq+5jYXPPwM3eQQIZ5Q+7TuJ0i2Z0t1A5ksGaM4IkYxjGP3RDF+A3Z5L6MUNTg4sOqMYx+1YF5mZ8kPMDxlgNC+/jFnFFh7FMy8HmdWXWOWXVZdd9CjlLG+6fcNXyi/lAO4yiPGKl8ccQjnOUJ8QKZRWLmd7iecrD60LpHppygMWTSYzVwAcmW9SrmZjmO8EEYxjH7ohDE+E3YvA+jNacWDj7EY/bgHZ9S9Q86hGwHpX2YQdDUmqi1cgM1dpQ5uFsu58BxtyC3LTocupw6ayz6mhl0COuseePZ/14SE3jFZy257VZ9QgALq9ejx9Zwhn3cvB/MOrPnUCDJEcxNmCCMYxj2X6p2iENYYnwG7PLfRizZx4OLGYx+3SKLTtrNW4bbnfBVSJedy5bxE9c0Mju8/6GdwqpXItOQ+K6xGqqrarrgP0YCQY2YEURsR0hBRfJfK8/WEEtDoC4dBo8dHgxhCAiFIjSI6PKCCJGMfuCEIYnyG7F4X0Ys2a3skxj2nsV9YM5cZLtCwnPoNNzbwJb0iyuB93kSxwWXsgvPbzgrVPXIOUaQVYFVmeyD4dgGDm4SDNfwMzh/Z5wslWZ9TSp4Hd4GGCMYx+5IQhg+U3Z5b6pqTW4BjJGOLjUrCvrEV9HpyLoO6ydV4S3HAdVBRlsV5EdMhUc13w2GHAIu4b2Wf0kAMUahbTJlWfuBAXbROebU/OasQgxGgJFiajLFfCJaszE2T1SNRRU51alO7y6W4wRiRj9wYEIYPkN2eQ+jNTOPBqYcDGMcGVKlfYMQiUBa7EVOX7tSmf1M+bFrnQuTj36y9wGHAGUEgW6g3XxYckc3KXlp8bYVMk0yDwIKCIwftSB7mUAagLW5nqPCO916zs4I8R3mTtAO5KvD+D3PvKOrG+D1g6kKAGxLGCMY4P2xCEMTjPgs8p9GamcfZpiRMalSpUrsVKiSsKwcKxuGEW9DXf4iMUoyXlqvDLvli4w4ij5huI0HiyoUeY4r04HKIHjUKAaqxqcGWYLoM66p0j1i7e6uWobYD0SHTTI8YcerMhR1goKHjF4vl6qZnB4O+A7AGqarmN5mj4V4S0EggyLFHQ7owMYx+4IQhhXwOM8p9GamcUGKIkSJhUqVKlSpWFYMqVKwrCpUcDzqS5Mwvg5Lvs/Yd0zMYYcAC994wrzQ3YklHSBrotfdHnxSrEVCzNeB7jScnlNW7sqLKFKzTNquWAgxFpy2XLK6mZ5XAGrbNUfIfAYxj9yQhg+c3nkPozUwaw4BBEiSpUSVKlSpUqVKlSpUqV2Kx456cYQYO8SelHdG1Yr728aUWLLhCuC9y+mEPbrTkq8Ud52AQzaLWR0SDAakQmzniEDjWlG2380vyFBreep8ZRzNHMwMY/bGJCGB/M4zyX0ZrQawwZwwRIkqJGKlSpUqVElSpUqVKlRIkSJKhaDVQdagHKK3KiHmm2UeccUWLLg2fLE2K8jfdM+CDUDknBOUt7IzkDwYwRc6BydjzM+USF+SwO5zjYy+wLgwwDwM7WeiBq96wYLXN7svbAxj9Z+mQhCEgqzPAQnzlKOE+DXvEqmpB2CGGHsA4iuwKlYKlSokqJKiS+dPFgShzYeJI80escUWXLhGghLZ0+YeGjloEARCwbBuJkkyzg/+uPPTugCtuL0eIeFTMCeHmjNeUF8nQ8g9zFqXBgwhYxlJn2x5INSgpyDwMY/ckIQghFUNq9EzHxqPsPNNKPcR3Qd6RGVr2CGGGHAYe0A4hwGHAqMMJEzmcvBJZx6+ma0eccUWLLlwUzhq2jZ3tOpTAw+ckCeLHgSbj9nnEDW3oMx7zKWJXSL06ocodtNSq4i6o4jmczS8ipcGDFHFpHkiaNwgjNFGCYxxftiEIMGFUWW1D01ORIJSsGU4m8ROUpZypyMB5Iw4by9v97P2XDYcBhjId88DftN9VvhGpNeIsWLLly8Gyc0yPbqGT3wISZUh5ujuUy3lhLBKAyWQKgwNLF9wDpUuDBwOKOklMiAb5LF1Mv3nujrGMfujAgxWRASlGYjwR4w29DJsc9N0ctRnlMqN+aKF9mJqhvVniRiNE2i4uXi4uXJeWwWlorAqLvhFxcvGVRhcZXNsAkF9dTqzvMYuuEj3ZTW4zGMNQ4rQHGOhTVAHekewOcbdU0OYUdRHqQzQn/CP9HxwGEWFxjdUDvlhsqFuM8ySzXQHgRjg/R4/YmBBgzJBBHUeMHFojC2G2uQHSA9/rt+TMJQvqQeAGcDIViPCiOHHDfKYdbpEcFElMKqZUx5izKmNvAmsFZi4Ir0x1w+Aj8DCbspiCxSOjVV1fCZCKXuM3rcGeDVgYzLczXxCCNnIL5wSoOKKJsjqTIGubhd8yy8N44msvYoDboI7geJMzDRufK1gPJ4EOw7W6Xfdp51AYZMOd7N3xYxjH6h9M7BCEGDBhSX3YOa4OX3xb/R/wDrnVLy2C/aQMKmKvffEY8Ioq19w5nnfjKFgxmMqckdYXrXMQTpLAMx6xNEiwGbBrcHB8nRijgIU7xKe5ild+HmXFKc5fqhihxllPIuvWiKTNkW1XVPFeMHPyZn74BvCut0Cy7gDvvAhgMF1Ly1VHQ/30mcBkRyQ7gPGMYxwfuyEGXBgwZcv6AC5cuXLly5cuXLl5S5cuXLgywQX5gh0dOjMgxd48DzBHnAQ06HMwDBBHAtuat2luq+HM0eWsvXE+UdV7XAlBHZgTJTpHXJ6sRaF8iWzhnOPZ31CmY6Tdu5xfI4by4QhBpDnDFzKP3Ms5A8RoHNUdYvwOeZb613RjH78hgMuXLly5cuXLly5cuXLly5cuXLly5cuXLgwYMFVlrHFqy61U5TQDtT5ezwlLgCCJHBz1zrSGAjiq8G5UX00GRQyIRswIUFzyYoUWw+FJvzzeeIQggmbMjaGrcN3f6TRTVHltOg25uyOkcH8Adm5cuXLly5cuXLly5cuXLly5cuXLly5cGDNdkhzrGDrvZ1+I1NncY4zZpeJs8yVzWwBEiRw1kG4moPTU7pkIMDjVlfQ78KlQIEDAvmRWb3m37l8+OlUap3z3HGOvmG1Nq5rGOD+LuX2rly8Ll9shBgwABwbWdeW2suo5LOLsCPXkGxHRsYCJuGg3PmUq4Y4wkSVMgw1aXiRii5Wl4sqGAQYCyZWvuDyOcqjHgWjoHFaHe5DMrJKdrWQ3eK8V6Rix/EXhcv7UhBgwZfSqDsMzIrqaApzpDAKuQpNdcw0VnvMlrXIMnrs8oxwx1hh7AEEGBslXZ47o/cBHlQL70k/wBaIUFch2F1V4vHuFEYxcH8tf0rhBgwYrYJbajetKaDM5mUyQW1evi1p3RvTLlTPiej+/GNinVFMbbAeWPY8k5MElt0GnXaIjbLo67+kWm8NANlf6PA4zLxSL5Ajd1eKxYxjg/8AYEGDBl+4xd2RmMNNeQAJ3Z10eTKBEzVfgC9Ql7T708SXCroHlM9OMXaL2l9oLaOtBbsaylRbmV+4PavoHjr6QUilv5T6HfL6Zk0PQZnm5iK+IhanVVzXmxjH/hSXBwGXLmtNIemGc3ZIPldPeusGFvrlvjeYhTOdBfiV5IbbQ3AeUtZiyOGks5DW6vrHmX5IfmHyhScJezz4KBqDif0HcRtYW/1yzYsvBj238cfYmFwYMuDBgwascy5pgfOsQugpDqG2T9I+PxbmC245KixZcWXi/8AFXLgy5cuXLly5cuXLwf+PuXLwvC5cuPaf+NvC8bwuX/4Wf8Ae8P+hf8A5T//2Q==';
 
-    // Inline manifest
-    const manifestData = {
-        name: "ExpenseFlow",
-        short_name: "ExpenseFlow",
-        start_url: ".",
-        display: "standalone",
-        background_color: "#0D1B2A",
-        theme_color: "#0D1B2A",
-        icons: [
-            { src: ICON_DATA_URI, sizes: "512x512", type: "image/jpeg" }
-        ]
-    };
-    const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(manifestBlob);
-    const manifestLink = document.createElement('link');
-    manifestLink.rel = 'manifest';
-    manifestLink.href = manifestURL;
-    document.head.appendChild(manifestLink);
+    // Safe Storage Wrapper (Prevents DOMException SecurityError in sandboxed iframes)
+    const storage = (() => {
+        let mem = {};
+        return {
+            getItem(key) {
+                try {
+                    return window.localStorage.getItem(key);
+                } catch (e) {
+                    return mem[key] !== undefined ? mem[key] : null;
+                }
+            },
+            setItem(key, value) {
+                try {
+                    window.localStorage.setItem(key, value);
+                } catch (e) {
+                    mem[key] = String(value);
+                }
+            },
+            removeItem(key) {
+                try {
+                    window.localStorage.removeItem(key);
+                } catch (e) {
+                    delete mem[key];
+                }
+            }
+        };
+    })();
 
-    // Apple touch icon
-    const appleIconLink = document.createElement('link');
-    appleIconLink.rel = 'apple-touch-icon';
-    appleIconLink.href = ICON_DATA_URI;
-    document.head.appendChild(appleIconLink);
+    // Safe History State Helpers
+    function safePushState(state, title, url) {
+        try { window.history.pushState(state, title, url); } catch (e) {}
+    }
+    function safeReplaceState(state, title, url) {
+        try { window.history.replaceState(state, title, url); } catch (e) {}
+    }
 
-    const firebaseConfig = window.firebaseConfig || {
-        apiKey: "AIzaSyDVKDiOnC1Wqvbg7-vymDW5hdo5hmdZ5nI",
-        authDomain: "finance-tracker-0710.firebaseapp.com",
-        projectId: "finance-tracker-0710",
-        storageBucket: "finance-tracker-0710.firebasestorage.app",
-        messagingSenderId: "844155637274",
-        appId: "1:844155637274:web:125b220fa0ce26650c0ba3",
-        measurementId: "G-ERJEFPQ4B3"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
+    // Inline manifest (guarded for sandboxed iframes)
+    try {
+        const manifestData = {
+            name: "ExpenseFlow",
+            short_name: "ExpenseFlow",
+            start_url: ".",
+            display: "standalone",
+            background_color: "#0D1B2A",
+            theme_color: "#0D1B2A",
+            icons: [
+                { src: ICON_DATA_URI, sizes: "512x512", type: "image/jpeg" }
+            ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = manifestURL;
+        document.head.appendChild(manifestLink);
+    } catch (e) {
+        console.warn("Manifest registration skipped in iframe sandbox:", e);
+    }
+
+    try {
+        const appleIconLink = document.createElement('link');
+        appleIconLink.rel = 'apple-touch-icon';
+        appleIconLink.href = ICON_DATA_URI;
+        document.head.appendChild(appleIconLink);
+    } catch (e) {}
+
+    let db = null;
+    let auth = null;
+    try {
+        if (typeof firebase !== 'undefined') {
+            const firebaseConfig = window.firebaseConfig || {
+                apiKey: "AIzaSyDVKDiOnC1Wqvbg7-vymDW5hdo5hmdZ5nI",
+                authDomain: "finance-tracker-0710.firebaseapp.com",
+                projectId: "finance-tracker-0710",
+                storageBucket: "finance-tracker-0710.firebasestorage.app",
+                messagingSenderId: "844155637274",
+                appId: "1:844155637274:web:125b220fa0ce26650c0ba3",
+                measurementId: "G-ERJEFPQ4B3"
+            };
+            if (!firebase.apps || !firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.firestore();
+            auth = firebase.auth();
+        }
+    } catch (err) {
+        console.warn("Firebase initialization notice:", err);
+    }
+
+    const DEFAULT_CATEGORIES = [
+        'Food',
+        'Transport',
+        'Shopping',
+        'Entertainment',
+        'Bills',
+        'Fitness/Health',
+        'Salary / Freelance',
+        'Others'
+    ];
+
     let entries = [];
-    let customCategories = JSON.parse(localStorage.getItem('clean_tracker_categories')) || [];
+    let customCategories = JSON.parse(storage.getItem('clean_tracker_categories') || '[]');
     let longPressTimer = null;
     let rowPressTimer = null;
     let unsubsFirestore = null;
     let unsubsPrefs = null;
     let cashStatsVisible = false;
-    let txOrderDesc = true; // true = latest first, false = oldest first
-    let currentFilter = 'all'; // 'all', 'expense', 'income', 'online', 'cash'
-    let monthlyBudget = parseFloat(localStorage.getItem('ft_monthly_budget')) || 30000;
+    let txOrderDesc = true;
+    let currentFilter = 'all';
+    let monthlyBudget = parseFloat(storage.getItem('ft_monthly_budget') || '30000');
     let isLocalGuest = false;
-    let localUid = 'guest_' + (localStorage.getItem('ft_guest_id') || Math.random().toString(36).substring(2, 9));
-    localStorage.setItem('ft_guest_id', localUid);
+    let localUid = 'guest_' + (storage.getItem('ft_guest_id') || Math.random().toString(36).substring(2, 9));
+    storage.setItem('ft_guest_id', localUid);
 
     function setQuickFilter(type, btn) {
         currentFilter = type;
@@ -1126,9 +1405,10 @@
                 if (!isNaN(num) && num > 0) {
                     monthlyBudget = num;
                     localStorage.setItem('ft_monthly_budget', num.toString());
-                    const user = auth.currentUser;
+                    const user = auth ? auth.currentUser : null;
                     if (user && !isLocalGuest) {
-                        getUserPrefsRef(user.uid).set({ monthlyBudget: num, updatedAt: Date.now() }, { merge: true }).catch(() => {});
+                        const prefsRef = getUserPrefsRef(user.uid);
+                        if (prefsRef) prefsRef.set({ monthlyBudget: num, updatedAt: Date.now() }, { merge: true }).catch(() => {});
                     }
                     renderHome();
                     showToast(`Budget target updated to ${formatINR(num, false)}`);
@@ -1210,6 +1490,11 @@
 
     // --- AUTH ---
     async function loginWithGoogle() {
+        if (!auth || typeof firebase === 'undefined' || !firebase.auth) {
+            showToast("Google sign-in unavailable in this environment, using guest sandbox");
+            enableLocalGuestMode();
+            return;
+        }
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
             await auth.signInWithPopup(provider);
@@ -1219,6 +1504,10 @@
     }
 
     async function loginAsGuest() {
+        if (!auth) {
+            enableLocalGuestMode();
+            return;
+        }
         try {
             await auth.signInAnonymously();
         } catch (e) {
@@ -1232,14 +1521,19 @@
         const authScreen = document.getElementById('screen-auth');
         const mainApp   = document.getElementById('main-app');
         const navBar    = document.getElementById('app-nav');
-        authScreen.style.display = 'none';
-        authScreen.classList.remove('active');
-        mainApp.style.display = 'block';
-        navBar.style.display = 'flex';
+        if (authScreen) {
+            authScreen.style.display = 'none';
+            authScreen.classList.remove('active');
+        }
+        if (mainApp) mainApp.style.display = 'block';
+        if (navBar) navBar.style.display = 'flex';
 
-        document.getElementById('user-photo').src = GUEST_AVATAR_URI;
-        document.getElementById('user-name').innerText  = "Guest Account";
-        document.getElementById('user-email').innerText = "Temporary Sandbox";
+        const photoEl = document.getElementById('user-photo');
+        if (photoEl) photoEl.src = GUEST_AVATAR_URI;
+        const nameEl = document.getElementById('user-name');
+        if (nameEl) nameEl.innerText = "Guest Account";
+        const emailEl = document.getElementById('user-email');
+        if (emailEl) emailEl.innerText = "Temporary Sandbox";
         const reminderEl1 = document.getElementById('backup-reminder');
         if (reminderEl1) reminderEl1.innerText = "Guest Mode (Local Sandbox)";
 
@@ -1252,27 +1546,32 @@
     }
 
     function logout() {
-        if (isLocalGuest) {
+        if (isLocalGuest || !auth) {
             isLocalGuest = false;
             const authScreen = document.getElementById('screen-auth');
             const mainApp   = document.getElementById('main-app');
             const navBar    = document.getElementById('app-nav');
-            authScreen.style.display = '';
-            authScreen.classList.add('active');
-            mainApp.style.display = 'none';
-            navBar.style.display = 'none';
+            if (authScreen) {
+                authScreen.style.display = '';
+                authScreen.classList.add('active');
+            }
+            if (mainApp) mainApp.style.display = 'none';
+            if (navBar) navBar.style.display = 'none';
             entries = [];
             renderHome();
-            if(document.getElementById('profile-menu').classList.contains('active')) toggleProfile();
+            const pMenu = document.getElementById('profile-menu');
+            if (pMenu && pMenu.classList.contains('active')) toggleProfile();
             return;
         }
         if(unsubsFirestore) { unsubsFirestore(); unsubsFirestore = null; }
         if(unsubsPrefs) { unsubsPrefs(); unsubsPrefs = null; }
-        auth.signOut();
-        if(document.getElementById('profile-menu').classList.contains('active')) toggleProfile();
+        if (auth) auth.signOut();
+        const pMenu = document.getElementById('profile-menu');
+        if (pMenu && pMenu.classList.contains('active')) toggleProfile();
     }
     function toggleProfile() {
         const menu = document.getElementById('profile-menu');
+        if (!menu) return;
         const willOpen = !menu.classList.contains('active');
         if (willOpen && typeof window.closeAllDropdowns === 'function') {
             window.closeAllDropdowns(menu);
@@ -1280,68 +1579,90 @@
         menu.classList.toggle('active');
     }
 
-    auth.onAuthStateChanged(user => {
-        if (isLocalGuest) return;
-        const authScreen = document.getElementById('screen-auth');
-        const mainApp   = document.getElementById('main-app');
-        const navBar    = document.getElementById('app-nav');
-        if (user) {
-            authScreen.style.display = 'none';
-            authScreen.classList.remove('active');
-            mainApp.style.display = 'block';
-            navBar.style.display = 'flex';
-            if (user.isAnonymous) {
-                document.getElementById('user-photo').src = GUEST_AVATAR_URI;
-                document.getElementById('user-name').innerText  = "Guest Account";
-                document.getElementById('user-email').innerText = "Temporary Sandbox";
-                const reminderEl = document.getElementById('backup-reminder');
-                if (reminderEl) reminderEl.innerText = "Guest Mode (Local Only)";
+    if (auth) {
+        auth.onAuthStateChanged(user => {
+            if (isLocalGuest) return;
+            const authScreen = document.getElementById('screen-auth');
+            const mainApp   = document.getElementById('main-app');
+            const navBar    = document.getElementById('app-nav');
+            if (user) {
+                if (authScreen) {
+                    authScreen.style.display = 'none';
+                    authScreen.classList.remove('active');
+                }
+                if (mainApp) mainApp.style.display = 'block';
+                if (navBar) navBar.style.display = 'flex';
+                if (user.isAnonymous) {
+                    const photoEl = document.getElementById('user-photo');
+                    if (photoEl) photoEl.src = GUEST_AVATAR_URI;
+                    const nameEl = document.getElementById('user-name');
+                    if (nameEl) nameEl.innerText = "Guest Account";
+                    const emailEl = document.getElementById('user-email');
+                    if (emailEl) emailEl.innerText = "Temporary Sandbox";
+                    const reminderEl = document.getElementById('backup-reminder');
+                    if (reminderEl) reminderEl.innerText = "Guest Mode (Local Only)";
+                } else {
+                    const photoEl = document.getElementById('user-photo');
+                    if (photoEl) photoEl.src = user.photoURL || '';
+                    const nameEl = document.getElementById('user-name');
+                    if (nameEl) nameEl.innerText = user.displayName || 'User';
+                    const emailEl = document.getElementById('user-email');
+                    if (emailEl) emailEl.innerText = user.email || '';
+                    const reminderEl = document.getElementById('backup-reminder');
+                    if (reminderEl) reminderEl.innerText = "Cloud Synced";
+                }
+                startSync(user.uid);
             } else {
-                document.getElementById('user-photo').src       = user.photoURL || '';
-                document.getElementById('user-name').innerText  = user.displayName;
-                document.getElementById('user-email').innerText = user.email;
-                const reminderEl = document.getElementById('backup-reminder');
-                if (reminderEl) reminderEl.innerText = "Cloud Synced";
+                if (authScreen) {
+                    authScreen.style.display = '';
+                    authScreen.classList.add('active');
+                }
+                if (mainApp) mainApp.style.display = 'none';
+                if (navBar) navBar.style.display = 'none';
+                entries = [];
+                renderHome();
             }
-            startSync(user.uid);
-        } else {
-            authScreen.style.display = '';
-            authScreen.classList.add('active');
-            mainApp.style.display = 'none';
-            navBar.style.display = 'none';
-            entries = [];
-            renderHome();
-        }
-    });
+        });
+    } else {
+        // Firebase Auth is not present or failed to load - seamlessly launch in guest sandbox mode
+        console.warn("Firebase Auth unavailable. Launching in guest mode.");
+        enableLocalGuestMode();
+    }
 
     // --- DATA REFS & SEGREGATION ---
     function getUserDocRef(uid) {
+        if (!db) return null;
         return db.collection("users").doc(uid);
     }
     function getUserTransactionsRef(uid) {
+        if (!db) return null;
         return db.collection("users").doc(uid).collection("transactions");
     }
     function getUserPrefsRef(uid) {
+        if (!db) return null;
         return db.collection("users").doc(uid).collection("preferences").doc("settings");
     }
 
     // Automatic migration of legacy flat collections (finance_data & user_prefs) to users/{uid}
     let isMigrating = false;
     async function migrateLegacyData(uid) {
-        if (isMigrating) return;
-        const user = auth.currentUser;
+        if (isMigrating || !db) return;
+        const user = auth ? auth.currentUser : null;
         if (!user || user.uid !== uid) return;
 
         isMigrating = true;
         try {
             // 1. Ensure user profile exists at users/{uid} (also tests write permissions)
             try {
-                await getUserDocRef(uid).set({
-                    uid: uid,
-                    email: user.email || '',
-                    displayName: user.displayName || '',
-                    lastSeen: Date.now()
-                }, { merge: true });
+                const userDoc = getUserDocRef(uid);
+                if (userDoc) {
+                    await userDoc.set({
+                        uid: uid,
+                        email: user.email || '',
+                        displayName: user.displayName || '',
+                        lastSeen: Date.now()
+                    }, { merge: true });
+                }
             } catch (ruleErr) {
                 console.error("Firestore security rules blocked user doc write:", ruleErr);
                 showToast("Database segregation requires updating Firestore Rules. Click Profile > Data Sync for details.", 6000);
@@ -1354,12 +1675,14 @@
                 if (legacyPrefDoc.exists) {
                     const pData = legacyPrefDoc.data();
                     if (pData && pData.customCategories && Array.isArray(pData.customCategories)) {
-                        await getUserPrefsRef(uid).set({
+                        const pRef = getUserPrefsRef(uid);
+                        if (pRef) await pRef.set({
                             customCategories: pData.customCategories,
                             updatedAt: Date.now()
                         }, { merge: true });
 
-                        await getUserDocRef(uid).set({
+                        const dRef = getUserDocRef(uid);
+                        if (dRef) await dRef.set({
                             customCategories: pData.customCategories,
                             updatedAt: Date.now()
                         }, { merge: true });
@@ -1392,8 +1715,8 @@
 
                     for (const doc of legacyDocs) {
                         const data = doc.data();
-                        const targetRef = getUserTransactionsRef(uid).doc(doc.id);
-                        batch.set(targetRef, { ...data, uid: uid }, { merge: true });
+                        const targetRef = getUserTransactionsRef(uid)?.doc(doc.id);
+                        if (targetRef) batch.set(targetRef, { ...data, uid: uid }, { merge: true });
                         count++;
                         deleteRefs.push(doc.ref);
 
@@ -1443,6 +1766,10 @@
             } catch(e) {}
         }
 
+        if (!db) {
+            return;
+        }
+
         try {
             // Trigger automatic legacy data migration in background once
             if (!localStorage.getItem('ft_migrated_' + uid)) {
@@ -1452,80 +1779,75 @@
             }
 
             // Real-time listener for user's transactions: users/{uid}/transactions
-            unsubsFirestore = getUserTransactionsRef(uid).onSnapshot(snap => {
-                if (snap.docs.length > 0) {
-                    // Critical: doc.id MUST override any data.id so delete/update work 100% reliably
-                    entries = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                    entries.sort((a,b) => new Date(b.date) - new Date(a.date));
-                    localStorage.setItem('finance_data_local', JSON.stringify(entries));
-                    localStorage.setItem('finance_data_local_' + uid, JSON.stringify(entries));
-                    populateCategories();
-                    renderHome();
-                } else {
-                    // Fallback to legacy finance_data only if local entries is also empty
-                    if (entries.length === 0) {
-                        db.collection("finance_data").where("uid", "==", uid).get().then(legacySnap => {
-                            if (!legacySnap.empty) {
-                                entries = legacySnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                                entries.sort((a,b) => new Date(b.date) - new Date(a.date));
-                                localStorage.setItem('finance_data_local', JSON.stringify(entries));
-                                localStorage.setItem('finance_data_local_' + uid, JSON.stringify(entries));
-                                populateCategories();
-                                renderHome();
-                            } else {
-                                entries = [];
-                                renderHome();
-                            }
-                        }).catch(() => {});
+            const txRef = getUserTransactionsRef(uid);
+            if (txRef) {
+                unsubsFirestore = txRef.onSnapshot(snap => {
+                    if (snap.docs.length > 0) {
+                        // Critical: doc.id MUST override any data.id so delete/update work 100% reliably
+                        entries = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                        entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                        localStorage.setItem('finance_data_local', JSON.stringify(entries));
+                        localStorage.setItem('finance_data_local_' + uid, JSON.stringify(entries));
+                        populateCategories();
+                        renderHome();
+                    } else {
+                        // Fallback to legacy finance_data only if local entries is also empty
+                        if (entries.length === 0 && db) {
+                            db.collection("finance_data").where("uid", "==", uid).get().then(legacySnap => {
+                                if (!legacySnap.empty) {
+                                    entries = legacySnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                                    entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                                    localStorage.setItem('finance_data_local', JSON.stringify(entries));
+                                    localStorage.setItem('finance_data_local_' + uid, JSON.stringify(entries));
+                                    populateCategories();
+                                    renderHome();
+                                } else {
+                                    entries = [];
+                                    renderHome();
+                                }
+                            }).catch(() => {});
+                        }
                     }
-                }
-            }, err => {
-                console.warn("Firestore sync notification:", err);
-                const local = JSON.parse(localStorage.getItem('finance_data_local') || '[]');
-                if (local.length > 0) {
-                    entries = local;
-                    entries.sort((a,b) => new Date(b.date) - new Date(a.date));
-                    renderHome();
-                }
-            });
+                }, err => {
+                    console.warn("Firestore sync notification:", err);
+                    const local = JSON.parse(localStorage.getItem('finance_data_local') || '[]');
+                    if (local.length > 0) {
+                        entries = local;
+                        entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+                        renderHome();
+                    }
+                });
+            }
 
             // Real-time listener for user's preferences: users/{uid}/preferences/settings
-            unsubsPrefs = getUserPrefsRef(uid).onSnapshot(doc => {
-                if (doc.exists && doc.data().customCategories) {
-                    customCategories = doc.data().customCategories;
-                    populateCategories();
-                } else {
-                    // Check legacy user_prefs while migration completes
-                    db.collection("user_prefs").doc(uid).get().then(legacyDoc => {
-                        if (legacyDoc.exists && legacyDoc.data().customCategories) {
-                            customCategories = legacyDoc.data().customCategories;
-                        } else {
+            const pRef = getUserPrefsRef(uid);
+            if (pRef) {
+                unsubsPrefs = pRef.onSnapshot(doc => {
+                    if (doc.exists && doc.data().customCategories) {
+                        customCategories = doc.data().customCategories;
+                        populateCategories();
+                    } else if (db) {
+                        // Check legacy user_prefs while migration completes
+                        db.collection("user_prefs").doc(uid).get().then(legacyDoc => {
+                            if (legacyDoc.exists && legacyDoc.data().customCategories) {
+                                customCategories = legacyDoc.data().customCategories;
+                            } else {
+                                customCategories = [];
+                            }
+                            populateCategories();
+                        }).catch(() => {
                             customCategories = [];
-                        }
-                        populateCategories();
-                    }).catch(() => {
-                        customCategories = [];
-                        populateCategories();
-                    });
-                }
-            }, err => {
-                console.warn("User prefs sync notification:", err);
-            });
+                            populateCategories();
+                        });
+                    }
+                }, err => {
+                    console.warn("User prefs sync notification:", err);
+                });
+            }
         } catch (e) {
             console.warn("Firestore collection error:", e);
         }
     }
-
-    const DEFAULT_CATEGORIES = [
-        'Food',
-        'Transport',
-        'Shopping',
-        'Entertainment',
-        'Bills',
-        'Fitness/Health',
-        'Salary / Freelance',
-        'Others'
-    ];
 
     function populateCategories(forceFirst = false) {
         const select = document.getElementById('f-category');
@@ -1598,21 +1920,26 @@
                     customCategories = customCategories.filter(cat => cat !== val);
 
                     // Sync preferences & updated transactions
-                    const user = auth.currentUser;
-                    if (user && !isLocalGuest) {
-                        getUserPrefsRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
-                        getUserDocRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
+                    const user = auth ? auth.currentUser : null;
+                    if (user && !isLocalGuest && db) {
+                        const pRef = getUserPrefsRef(user.uid);
+                        if (pRef) pRef.set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
+                        const dRef = getUserDocRef(user.uid);
+                        if (dRef) dRef.set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
 
                         if (movedCount > 0) {
-                            getUserTransactionsRef(user.uid).where("category", "==", val).get().then(snap => {
-                                if (!snap.empty) {
-                                    const batch = db.batch();
-                                    snap.docs.forEach(doc => {
-                                        batch.update(doc.ref, { category: 'Others' });
-                                    });
-                                    batch.commit().catch(err => console.warn("Firestore batch move error:", err));
-                                }
-                            }).catch(err => console.warn(err));
+                            const tRef = getUserTransactionsRef(user.uid);
+                            if (tRef) {
+                                tRef.where("category", "==", val).get().then(snap => {
+                                    if (!snap.empty) {
+                                        const batch = db.batch();
+                                        snap.docs.forEach(doc => {
+                                            batch.update(doc.ref, { category: 'Others' });
+                                        });
+                                        batch.commit().catch(err => console.warn("Firestore batch move error:", err));
+                                    }
+                                }).catch(err => console.warn(err));
+                            }
                         }
                     }
 
@@ -1672,10 +1999,12 @@
                         }
 
                         customCategories.push(cleanedCat);
-                        const user = auth.currentUser;
-                        if (user && !isLocalGuest) {
-                            getUserPrefsRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
-                            getUserDocRef(user.uid).set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
+                        const user = auth ? auth.currentUser : null;
+                        if (user && !isLocalGuest && db) {
+                            const pRef = getUserPrefsRef(user.uid);
+                            if (pRef) pRef.set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
+                            const dRef = getUserDocRef(user.uid);
+                            if (dRef) dRef.set({ customCategories, updatedAt: Date.now() }, { merge: true }).catch(err => console.warn(err));
                         }
                         localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
                         populateCategories();
@@ -1695,7 +2024,7 @@
     // --- ROW DELETE & LONG PRESS ---
     function deleteEntryById(entryId) {
         if (!entryId) return;
-        const user = auth.currentUser;
+        const user = auth ? auth.currentUser : null;
 
         // 1. INSTANT OPTIMISTIC DELETE: Remove immediately from memory in 0ms
         entries = entries.filter(e => e.id !== entryId);
@@ -1709,10 +2038,13 @@
         showToast("Entry deleted");
 
         // 3. BACKGROUND FIRESTORE DELETION
-        if (user && !isLocalGuest) {
-            getUserTransactionsRef(user.uid).doc(entryId).delete().catch(err => {
-                console.warn("Delete error in user collection:", err);
-            });
+        if (user && !isLocalGuest && db) {
+            const txRef = getUserTransactionsRef(user.uid);
+            if (txRef) {
+                txRef.doc(entryId).delete().catch(err => {
+                    console.warn("Delete error in user collection:", err);
+                });
+            }
             db.collection("finance_data").doc(entryId).delete().catch(() => {});
         }
     }
@@ -1787,8 +2119,7 @@
         let timer = null;
         let isLongPress = false;
 
-        const start = (e) => {
-            if (e.target.closest('.editable-cell input')) return;
+        const start = () => {
             isLongPress = false;
             row.classList.add('pressing');
             timer = setTimeout(() => {
@@ -1803,7 +2134,7 @@
         };
 
         row.addEventListener('mousedown', (e) => {
-            if (e.button === 0) start(e);
+            if (e.button === 0) start();
         });
         row.addEventListener('mouseup', cancel);
         row.addEventListener('mouseleave', cancel);
@@ -1812,7 +2143,6 @@
         row.addEventListener('touchmove', cancel);
         row.addEventListener('touchcancel', cancel);
         row.addEventListener('contextmenu', e => {
-            if (e.target.closest('.editable-cell input')) return;
             e.preventDefault();
             cancel();
             openTxActionMenu(entryId);
@@ -1822,7 +2152,9 @@
                 e.stopPropagation();
                 e.preventDefault();
                 isLongPress = false;
+                return;
             }
+            openTxActionMenu(entryId);
         }, true);
     }
 
@@ -1841,6 +2173,7 @@
     }
 
     // --- NAVIGATION ---
+    let currentActiveView = 'home';
     function viewRankDayDetails(dateStr) { navigateTo('analysis-items', { date: dateStr }); }
     function handleNavClick(tabId) {
         if (tabId === 'home') navigateTo('home');
@@ -1848,15 +2181,22 @@
     }
 
     function navigateTo(viewId, params = {}, pushState = true) {
+        currentActiveView = viewId;
         if (typeof window.closeAllDropdowns === 'function') window.closeAllDropdowns();
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        if (pushState) window.history.pushState({ viewId, params }, '', '');
+        if (pushState) safePushState({ viewId, params }, '', '');
         window.scrollTo(0,0);
         if (viewId === 'home') {
             document.getElementById('screen-home').classList.add('active');
             document.getElementById('nav-btn-home').classList.add('active');
             renderHome();
+        } else if (viewId === 'all-transactions') {
+            const allTxScreen = document.getElementById('screen-all-transactions');
+            if (allTxScreen) allTxScreen.classList.add('active');
+            const homeNavBtn = document.getElementById('nav-btn-home');
+            if (homeNavBtn) homeNavBtn.classList.add('active');
+            renderAllTransactionsView();
         } else {
             document.getElementById('screen-analysis').classList.add('active');
             document.getElementById('nav-btn-analysis').classList.add('active');
@@ -1871,12 +2211,12 @@
         if (e.state && e.state.viewId) navigateTo(e.state.viewId, e.state.params, false);
         else navigateTo('home', {}, false);
     });
-    window.history.replaceState({ viewId: 'home', params: {} }, '', '');
+    safeReplaceState({ viewId: 'home', params: {} }, '', '');
 
     // --- FORM SUBMIT ---
     document.getElementById('finance-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        const user = auth.currentUser;
+        const user = auth ? auth.currentUser : null;
         const dateInput = document.getElementById('f-date');
         const descInput = document.getElementById('f-desc');
         const amtInput  = document.getElementById('f-amount');
@@ -1897,7 +2237,8 @@
         }
 
         // Generate persistent ID
-        const docRef = (user && !isLocalGuest) ? getUserTransactionsRef(user.uid).doc() : null;
+        const txRef = (user && !isLocalGuest && db) ? getUserTransactionsRef(user.uid) : null;
+        const docRef = txRef ? txRef.doc() : null;
         const entryId = docRef ? docRef.id : ('tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7));
 
         const newEntry = {
@@ -1953,6 +2294,31 @@
     }
     function prettyDate(d)  { const [y,m,day] = d.split('-'); return `${day}-${m}-${y}`; }
 
+    function escapeHTML(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatPhonePeDate(d) {
+        if (!d) return '';
+        try {
+            const [y, m, day] = d.split('-');
+            const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(day, 10));
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const dayName = isNaN(dateObj.getTime()) ? '' : dayNames[dateObj.getDay()];
+            const monthIdx = parseInt(m, 10) - 1;
+            const shortMonth = (monthNames[monthIdx] || '').substring(0, 3);
+            return `${day} ${shortMonth} ${y}${dayName ? ' &bull; ' + dayName : ''}`;
+        } catch (e) {
+            return prettyDate(d);
+        }
+    }
+
     // Resolve type: old "normal" entries treated as normalneg
     function resolveType(e) {
         if (e.type === 'normal') return 'normalneg';
@@ -1961,81 +2327,20 @@
 
     function getMode(e) { return e.mode || 'online'; }
 
-    function makeEditable(el, entryId, field, rawValue) {
-        if (el.querySelector('input')) return;
-        const tx = entries.find(x => x.id === entryId);
-        if (!tx) return;
-
-        const originalHTML = el.innerHTML;
-        const currentVal = field === 'amount' ? tx.amount.toString() : (tx.desc || '');
-
-        const input = document.createElement('input');
-        input.type = field === 'amount' ? 'number' : 'text';
-        if (field === 'amount') input.step = '0.01';
-        input.value = currentVal;
-        input.className = 'cell-edit-input';
-
-        let hasSaved = false;
-        const saveChanges = () => {
-            if (hasSaved) return;
-            hasSaved = true;
-            const newRawValue = input.value.trim();
-
-            if (newRawValue !== "" && newRawValue !== currentVal) {
-                // 1. INSTANT OPTIMISTIC UPDATE IN MEMORY (0ms delay)
-                if (field === 'amount') {
-                    const parsed = parseFloat(newRawValue);
-                    tx.amount = isNaN(parsed) ? 0 : Math.abs(parsed);
-                } else {
-                    tx.desc = newRawValue;
-                }
-
-                // Save locally
-                localStorage.setItem('finance_data_local', JSON.stringify(entries));
-                const user = auth.currentUser;
-                if (user) {
-                    localStorage.setItem('finance_data_local_' + user.uid, JSON.stringify(entries));
-                }
-
-                // Instant UI re-render
-                renderHome();
-                showToast("Updated");
-
-                // 2. BACKGROUND CLOUD SYNC (Non-blocking)
-                if (user && !isLocalGuest) {
-                    const updatePayload = field === 'amount' ? { amount: tx.amount } : { desc: tx.desc };
-                    getUserTransactionsRef(user.uid).doc(entryId).set(updatePayload, { merge: true }).catch(err => {
-                        console.warn("Firestore update error:", err);
-                    });
-                }
-            } else {
-                el.innerHTML = originalHTML;
-            }
-        };
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveChanges();
-            } else if (e.key === 'Escape') {
-                hasSaved = true;
-                el.innerHTML = originalHTML;
-            }
-        });
-        input.addEventListener('blur', saveChanges);
-        el.innerHTML = '';
-        el.appendChild(input);
-        input.focus();
-        input.select();
-    }
-
     // --- RENDER HOME ---
     function renderHome() {
-        const selMonth = document.getElementById('view-month').value;
-        const query    = document.getElementById('search-bar').value.toLowerCase();
+        const vmEl = document.getElementById('view-month');
+        if (vmEl && !vmEl.value) {
+            vmEl.value = new Date().toISOString().slice(0,7);
+        }
+        const selMonth = vmEl ? vmEl.value : new Date().toISOString().slice(0,7);
+        const searchEl = document.getElementById('search-bar');
+        const query    = searchEl ? searchEl.value.toLowerCase() : '';
         const txList   = document.getElementById('tx-list');
         const rankList = document.getElementById('rank-list');
-        txList.innerHTML = ''; rankList.innerHTML = '';
+        if (txList) txList.innerHTML = '';
+        if (rankList) rankList.innerHTML = '';
+        if (!txList) return;
 
         const monthData = entries.filter(e => e.date.startsWith(selMonth));
         const filtered  = monthData.filter(e =>
@@ -2099,16 +2404,13 @@
 
                 const cashTag = mode === 'cash' ? `<span class="cash-label">(cash)</span>` : '';
                 const categoryDisplay = e.category || '\u2014';
-                
-                // Generate a safe string for the onclick attribute handling both newlines and quotes
-                const safeDescJSON = JSON.stringify(e.desc || '').replace(/"/g, '&quot;');
 
                 const row = document.createElement('tr');
                 row.className = 'tx-row';
                 row.innerHTML = `
                     <td class="col-date">${prettyDate(e.date)}</td>
-                    <td class="col-desc editable-cell" onclick="makeEditable(this,'${e.id}','desc',${safeDescJSON})">${e.desc}${cashTag}</td>
-                    <td class="col-amount val-${t} editable-cell" onclick="makeEditable(this,'${e.id}','amount')">${prefix}${formatINR(e.amount)}</td>
+                    <td class="col-desc">${e.desc}${cashTag}</td>
+                    <td class="col-amount val-${t}">${prefix}${formatINR(e.amount)}</td>
                     <td class="col-category">${categoryDisplay}</td>
                 `;
                 
@@ -2165,6 +2467,274 @@
                 </div>`
             );
         });
+
+        // Update See All lifetime count badge in home panel
+        const seeAllCountEl = document.getElementById('see-all-lifetime-count');
+        if (seeAllCountEl) {
+            seeAllCountEl.innerText = `(${entries.length} Total)`;
+        }
+        if (currentActiveView === 'all-transactions') {
+            renderAllTxGroupsOnly();
+        }
+    }
+
+    // --- ALL TRANSACTIONS (LIFETIME PHONEPE-STYLE VIEW) ---
+    let allTxFilter = 'all';
+    let allTxSearch = '';
+
+    function handleAllTxSearchInput(val) {
+        allTxSearch = val;
+        renderAllTxGroupsOnly();
+    }
+
+    function setAllTxFilter(filterType) {
+        allTxFilter = filterType;
+        document.querySelectorAll('#screen-all-transactions .v2-filter-btn').forEach(b => {
+            b.classList.remove('active');
+        });
+        const activeBtn = Array.from(document.querySelectorAll('#screen-all-transactions .v2-filter-btn')).find(b => {
+            return b.getAttribute('data-filter') === filterType;
+        });
+        if (activeBtn) activeBtn.classList.add('active');
+        renderAllTxGroupsOnly();
+    }
+
+    function resetAllTxFilters() {
+        allTxFilter = 'all';
+        allTxSearch = '';
+        const searchInput = document.getElementById('all-tx-search-input');
+        if (searchInput) searchInput.value = '';
+        document.querySelectorAll('#screen-all-transactions .v2-filter-btn').forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-filter') === 'all');
+        });
+        renderAllTxGroupsOnly();
+    }
+
+    function renderAllTransactionsView() {
+        const content = document.getElementById('all-transactions-content');
+        if (!content) return;
+
+        let lifetimeIn = 0, lifetimeOut = 0, lifetimeNet = 0;
+        entries.forEach(e => {
+            const t = resolveType(e);
+            if (t === 'income' || t === 'normalpos') {
+                lifetimeIn += e.amount;
+                lifetimeNet += e.amount;
+            } else if (t === 'expense' || t === 'normalneg') {
+                lifetimeOut += e.amount;
+                lifetimeNet -= e.amount;
+            }
+        });
+
+        content.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+                <button class="back-btn" onclick="navigateTo('home')" style="margin-bottom:0;">&#8592; Back to Dashboard</button>
+                <div style="font-size:0.84rem;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                    <span>Lifetime Record:</span>
+                    <strong style="color:var(--text-main);font-weight:700;">${entries.length}</strong> transactions
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <h1 style="margin:0 0 6px 0;font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;color:#FFFFFF;">All Transactions</h1>
+                <p style="margin:0;color:var(--text-muted);font-size:0.88rem;">Complete lifetime history segregated by month &amp; year &bull; Latest at top</p>
+            </div>
+
+            <!-- Lifetime Summary Stats Grid -->
+            <div class="phonepe-stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Lifetime Received</span>
+                    <div class="stat-value val-income">${formatINR(lifetimeIn)}</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Lifetime Spent</span>
+                    <div class="stat-value val-expense">${formatINR(lifetimeOut)}</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Net Lifetime Balance</span>
+                    <div class="stat-value ${lifetimeNet >= 0 ? 'val-income' : 'val-expense'}">${formatINR(lifetimeNet)}</div>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container" style="margin-bottom:12px;">
+                <input type="text" id="all-tx-search-input" class="search-input" placeholder="Search description, category, mode, or amount..." value="${escapeHTML(allTxSearch)}" oninput="handleAllTxSearchInput(this.value)">
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="v2-filter-bar" style="margin-bottom:24px;">
+                <button class="v2-filter-btn ${allTxFilter === 'all' ? 'active' : ''}" data-filter="all" onclick="setAllTxFilter('all')">All</button>
+                <button class="v2-filter-btn ${allTxFilter === 'expense' ? 'active' : ''}" data-filter="expense" onclick="setAllTxFilter('expense')">Expenses</button>
+                <button class="v2-filter-btn ${allTxFilter === 'income' ? 'active' : ''}" data-filter="income" onclick="setAllTxFilter('income')">Income</button>
+                <button class="v2-filter-btn ${allTxFilter === 'online' ? 'active' : ''}" data-filter="online" onclick="setAllTxFilter('online')">Online</button>
+                <button class="v2-filter-btn ${allTxFilter === 'cash' ? 'active' : ''}" data-filter="cash" onclick="setAllTxFilter('cash')">Cash</button>
+            </div>
+
+            <!-- Grouped Transaction List Container -->
+            <div id="all-tx-groups-container"></div>
+        `;
+
+        renderAllTxGroupsOnly();
+    }
+
+    function renderAllTxGroupsOnly() {
+        const container = document.getElementById('all-tx-groups-container');
+        if (!container) return;
+
+        if (entries.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:56px 20px;background:rgba(11,19,43,0.5);border:1px dashed rgba(255,255,255,0.14);border-radius:18px;">
+                    <div style="width:52px;height:52px;border-radius:50%;background:rgba(59,130,246,0.12);display:inline-flex;align-items:center;justify-content:center;color:var(--primary-hi);margin-bottom:14px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                    </div>
+                    <h3 style="margin:0 0 6px 0;color:#FFFFFF;font-size:1.15rem;">No transactions yet</h3>
+                    <p style="color:var(--text-muted);font-size:0.88rem;margin:0 0 18px 0;">Add your first expense or income from the dashboard</p>
+                    <button class="add-btn" style="width:auto;height:40px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;gap:6px;" onclick="navigateTo('home')">
+                        Go to Dashboard
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort latest transactions first (by date descending, then timestamp descending)
+        let list = [...entries];
+        list.sort((a, b) => {
+            const dateDiff = new Date(b.date) - new Date(a.date);
+            const tsDiff = (b.ts || 0) - (a.ts || 0);
+            return dateDiff !== 0 ? dateDiff : tsDiff;
+        });
+
+        // Search filter
+        const query = (allTxSearch || '').trim().toLowerCase();
+        if (query) {
+            list = list.filter(e => {
+                const desc = (e.desc || '').toLowerCase();
+                const cat = (e.category || '').toLowerCase();
+                const amt = String(e.amount || '');
+                const mode = (getMode(e) || '').toLowerCase();
+                return desc.includes(query) || cat.includes(query) || amt.includes(query) || mode.includes(query);
+            });
+        }
+
+        // Segment filter
+        if (allTxFilter === 'expense') {
+            list = list.filter(e => resolveType(e) === 'expense' || resolveType(e) === 'normalneg');
+        } else if (allTxFilter === 'income') {
+            list = list.filter(e => resolveType(e) === 'income' || resolveType(e) === 'normalpos');
+        } else if (allTxFilter === 'online') {
+            list = list.filter(e => getMode(e) === 'online');
+        } else if (allTxFilter === 'cash') {
+            list = list.filter(e => getMode(e) === 'cash');
+        }
+
+        if (list.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:50px 20px;background:rgba(11,19,43,0.5);border:1px dashed rgba(255,255,255,0.12);border-radius:18px;margin-top:12px;">
+                    <div style="width:48px;height:48px;border-radius:50%;background:rgba(59,130,246,0.1);display:inline-flex;align-items:center;justify-content:center;color:var(--primary-hi);margin-bottom:12px;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <h4 style="margin:0 0 6px 0;color:#FFFFFF;font-size:1.05rem;">No matching transactions</h4>
+                    <p style="color:var(--text-muted);font-size:0.86rem;margin:0 0 16px 0;">No records matched your search query or filter</p>
+                    <button class="btn-outline" onclick="resetAllTxFilters()" style="padding:7px 18px;font-size:0.82rem;">Reset Filters</button>
+                </div>
+            `;
+            return;
+        }
+
+        // Group by month and year (YYYY-MM)
+        const groups = {};
+        list.forEach(e => {
+            const mKey = (e.date && e.date.length >= 7) ? e.date.slice(0, 7) : 'Unknown';
+            if (!groups[mKey]) groups[mKey] = [];
+            groups[mKey].push(e);
+        });
+
+        // Sort month keys descending (newest month at top)
+        const sortedMonthKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+        let html = '';
+        sortedMonthKeys.forEach(mKey => {
+            let monthNameYear = mKey;
+            if (mKey.includes('-')) {
+                const [y, mo] = mKey.split('-');
+                const mIdx = parseInt(mo, 10) - 1;
+                monthNameYear = `${monthNames[mIdx] || mo} ${y}`;
+            }
+
+            const mEntries = groups[mKey];
+            let mSpent = 0, mEarned = 0;
+            mEntries.forEach(e => {
+                const t = resolveType(e);
+                if (t === 'expense' || t === 'normalneg') mSpent += e.amount;
+                else if (t === 'income' || t === 'normalpos') mEarned += e.amount;
+            });
+
+            html += `
+                <div class="phonepe-group">
+                    <div class="phonepe-group-header">
+                        <div class="phonepe-month-title">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary-hi);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <span>${monthNameYear}</span>
+                        </div>
+                        <div class="phonepe-month-stats">
+                            <span>Spent: <strong style="color:var(--expense);">${formatINR(mSpent)}</strong></span>
+                            ${mEarned > 0 ? `<span>&bull; Received: <strong style="color:var(--income);">${formatINR(mEarned)}</strong></span>` : ''}
+                            <span>&bull; ${mEntries.length} ${mEntries.length === 1 ? 'txn' : 'txns'}</span>
+                        </div>
+                    </div>
+                    <div class="phonepe-tx-list">
+            `;
+
+            mEntries.forEach(e => {
+                const t = resolveType(e);
+                const isIncome = (t === 'income' || t === 'normalpos');
+                const mode = getMode(e);
+                const prefix = isIncome ? '+' : '-';
+                const categoryDisplay = e.category || 'Uncategorized';
+                const dateDisplay = formatPhonePeDate(e.date);
+
+                html += `
+                    <div class="phonepe-tx-card" onclick="openTxActionMenu('${e.id}')" title="Click to view options, edit, or delete">
+                        <div class="phonepe-tx-left">
+                            <div class="phonepe-icon-bubble ${isIncome ? 'income' : 'expense'}">
+                                ${isIncome ? 
+                                    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="7" x2="17" y2="17"></line><polyline points="17 7 17 17 7 17"></polyline></svg>` : 
+                                    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>`
+                                }
+                            </div>
+                            <div class="phonepe-tx-info">
+                                <div class="phonepe-tx-title">${escapeHTML(e.desc || 'No description')}</div>
+                                <div class="phonepe-tx-meta">
+                                    <span>${dateDisplay}</span>
+                                    <span style="opacity:0.35;">&bull;</span>
+                                    <span>${escapeHTML(categoryDisplay)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="phonepe-tx-right">
+                            <div class="phonepe-tx-amount ${isIncome ? 'val-income' : 'val-expense'}">
+                                ${prefix}${formatINR(e.amount)}
+                            </div>
+                            <div class="phonepe-tx-subtext">
+                                <span class="${mode === 'cash' ? 'phonepe-mode-cash' : 'phonepe-mode-online'}">
+                                    ${mode === 'cash' ? 'Cash' : 'Online'}
+                                </span>
+                                <span style="opacity:0.35;">&bull;</span>
+                                <span>${isIncome ? 'Credited' : 'Debited'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
     }
 
     // --- CATEGORY BREAKDOWN ---
@@ -2209,10 +2779,18 @@
         });
     }
 
+    function safeBack() {
+        try {
+            window.history.back();
+        } catch (e) {
+            navigateTo('home');
+        }
+    }
+
     function renderMonthlyAnalysisView(year) {
         const content = document.getElementById('analysis-content');
         const yearEntries = entries.filter(e => e.date.startsWith(year));
-        content.innerHTML = `<button class="back-btn" onclick="window.history.back()">&#8592; Back to Years</button><h1>${year} Monthly Analysis</h1>` + buildInlineCategoryBreakdown(yearEntries);
+        content.innerHTML = `<button class="back-btn" onclick="safeBack()">&#8592; Back to Years</button><h1>${year} Monthly Analysis</h1>` + buildInlineCategoryBreakdown(yearEntries);
         let months = {};
         yearEntries.forEach(e => {
             if (resolveType(e) === 'expense') {
@@ -2241,7 +2819,7 @@
         const monthFilteredEntries = entries.filter(e => e.date.startsWith(mKey));
         const [y, mo] = mKey.split('-');
         const monthNameWithYear = `${monthNames[parseInt(mo)-1]} ${y}`;
-        content.innerHTML = `<button class="back-btn" onclick="window.history.back()">&#8592; Back to Months</button><h1>${monthNameWithYear} Daily Analysis</h1>` + buildInlineCategoryBreakdown(monthFilteredEntries);
+        content.innerHTML = `<button class="back-btn" onclick="safeBack()">&#8592; Back to Months</button><h1>${monthNameWithYear} Daily Analysis</h1>` + buildInlineCategoryBreakdown(monthFilteredEntries);
         let days = {};
         monthFilteredEntries.forEach(e => {
             if (resolveType(e) === 'expense') { days[e.date] = (days[e.date]||0) + e.amount; }
@@ -2259,7 +2837,7 @@
     function renderItemDetailsView(date) {
         const content = document.getElementById('analysis-content');
         const dayFilteredEntries = entries.filter(e => e.date === date);
-        content.innerHTML = `<button class="back-btn" onclick="window.history.back()">&#8592; Back</button><h1>${prettyDate(date)} Purchased Items</h1>` + buildInlineCategoryBreakdown(dayFilteredEntries);
+        content.innerHTML = `<button class="back-btn" onclick="safeBack()">&#8592; Back</button><h1>${prettyDate(date)} Purchased Items</h1>` + buildInlineCategoryBreakdown(dayFilteredEntries);
         dayFilteredEntries.sort((a,b) => (b.ts||0) - (a.ts||0)).forEach(e => {
             if (resolveType(e) === 'expense') {
                 const cashTag = getMode(e) === 'cash' ? ` <span style="font-size:0.68rem;color:var(--text-muted);">(cash)</span>` : '';
@@ -2515,10 +3093,10 @@
                 });
                 localStorage.setItem('clean_tracker_categories', JSON.stringify(customCategories));
 
-                const user = auth.currentUser;
+                const user = auth ? auth.currentUser : null;
                 showToast(`Importing ${parsedList.length} transactions...`);
 
-                if (isLocalGuest || !user) {
+                if (isLocalGuest || !user || !db) {
                     parsedList.forEach((entry, idx) => {
                         entries.unshift({
                             id: 'tx_bulk_' + Date.now() + '_' + idx,
@@ -2853,20 +3431,23 @@
             const selector = 'input[type="date"], input[type="month"]';
             document.querySelectorAll(selector).forEach(bindInput);
 
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach(m => {
-                    m.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) {
-                            if (node.matches && node.matches(selector)) {
-                                bindInput(node);
-                            } else if (node.querySelectorAll) {
-                                node.querySelectorAll(selector).forEach(bindInput);
+            if (typeof MutationObserver !== 'undefined') {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach(m => {
+                        m.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                if (node.matches && node.matches(selector)) {
+                                    bindInput(node);
+                                } else if (node.querySelectorAll) {
+                                    node.querySelectorAll(selector).forEach(bindInput);
+                                }
                             }
-                        }
+                        });
                     });
                 });
-            });
-            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+                const targetNode = document.body || document.documentElement;
+                if (targetNode) observer.observe(targetNode, { childList: true, subtree: true });
+            }
 
             document.addEventListener('mousedown', (e) => {
                 if (pickerEl && pickerEl.style.display !== 'none') {
@@ -3106,20 +3687,23 @@
         function initCustomSelects() {
             document.querySelectorAll('select').forEach(bindSelect);
 
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach(m => {
-                    m.addedNodes.forEach(node => {
-                        if (node.nodeType === 1) {
-                            if (node.matches && node.matches('select')) {
-                                bindSelect(node);
-                            } else if (node.querySelectorAll) {
-                                node.querySelectorAll('select').forEach(bindSelect);
+            if (typeof MutationObserver !== 'undefined') {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach(m => {
+                        m.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                if (node.matches && node.matches('select')) {
+                                    bindSelect(node);
+                                } else if (node.querySelectorAll) {
+                                    node.querySelectorAll('select').forEach(bindSelect);
+                                }
                             }
-                        }
+                        });
                     });
                 });
-            });
-            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+                const targetNode = document.body || document.documentElement;
+                if (targetNode) observer.observe(targetNode, { childList: true, subtree: true });
+            }
 
             document.addEventListener('mousedown', (e) => {
                 if (selectPopupEl && selectPopupEl.style.display !== 'none') {
@@ -3273,7 +3857,7 @@
 
             // Save locally in 0ms
             localStorage.setItem('finance_data_local', JSON.stringify(entries));
-            const user = auth.currentUser;
+            const user = auth ? auth.currentUser : null;
             if (user) {
                 localStorage.setItem('finance_data_local_' + user.uid, JSON.stringify(entries));
             }
@@ -3284,10 +3868,13 @@
             showToast("Transaction updated");
 
             // 2. BACKGROUND FIRESTORE SYNC (Non-blocking)
-            if (user && !isLocalGuest) {
-                getUserTransactionsRef(user.uid).doc(entryId).set({ ...tx }, { merge: true }).catch(err => {
-                    console.warn("Firestore update error:", err);
-                });
+            if (user && !isLocalGuest && db) {
+                const txRef = getUserTransactionsRef(user.uid);
+                if (txRef) {
+                    txRef.doc(entryId).set({ ...tx }, { merge: true }).catch(err => {
+                        console.warn("Firestore update error:", err);
+                    });
+                }
             }
         });
     }

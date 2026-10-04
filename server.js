@@ -11,6 +11,8 @@ const HOST = '0.0.0.0';
 
 // Serve dynamic Firebase client configuration from env vars
 app.get('/firebase-config.js', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   const config = {
     apiKey: process.env.FIREBASE_API_KEY || "AIzaSyDVKDiOnC1Wqvbg7-vymDW5hdo5hmdZ5nI",
     authDomain: process.env.FIREBASE_AUTH_DOMAIN || "finance-tracker-0710.firebaseapp.com",
