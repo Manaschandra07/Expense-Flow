@@ -2327,6 +2327,46 @@
 
     function getMode(e) { return e.mode || 'online'; }
 
+    // Central financial calculation formula (Standard across Dashboard and All Transactions)
+    function calculateFinanceStats(items) {
+        let tIn = 0, tOut = 0, netBalance = 0;
+        let cIn = 0, cOut = 0, cNet = 0;
+
+        items.forEach(e => {
+            const amt = parseFloat(e.amount) || 0;
+            const t = resolveType(e);
+            const mode = getMode(e);
+            const isOnline = mode === 'online';
+            const isCash = mode === 'cash';
+
+            if (t === 'income') {
+                if (isOnline) { tIn += amt; netBalance += amt; }
+                if (isCash)   { cIn += amt; cNet += amt; }
+            } else if (t === 'expense') {
+                if (isOnline) { tOut += amt; netBalance -= amt; }
+                if (isCash)   { cOut += amt; cNet -= amt; }
+            } else if (t === 'normalpos') {
+                if (isOnline) netBalance += amt;
+                if (isCash)   cNet += amt;
+            } else if (t === 'normalneg') {
+                if (isOnline) netBalance -= amt;
+                if (isCash)   cNet -= amt;
+            }
+        });
+
+        return {
+            tIn,
+            tOut,
+            netBalance,
+            cIn,
+            cOut,
+            cNet,
+            totalEarned: tIn + cIn,
+            totalSpent:  tOut + cOut,
+            totalNet:    netBalance + cNet
+        };
+    }
+
     // --- RENDER HOME ---
     function renderHome() {
         const vmEl = document.getElementById('view-month');
@@ -2348,28 +2388,14 @@
             (e.category && e.category.toLowerCase().includes(query))
         );
 
-        let tIn = 0, tOut = 0, netBalance = 0;
-        let cIn = 0, cOut = 0, cNet = 0;
+        const stats = calculateFinanceStats(monthData);
+        const { tIn, tOut, netBalance, cIn, cOut, cNet, totalSpent, totalEarned } = stats;
+
         let dailyMap = {};
-
         monthData.forEach(e => {
-            const t    = resolveType(e);
-            const mode = getMode(e);
-            const isOnline = mode === 'online';
-            const isCash   = mode === 'cash';
-
-            if (t === 'income') {
-                if (isOnline) { tIn += e.amount; netBalance += e.amount; }
-                if (isCash)   { cIn += e.amount; cNet += e.amount; }
-            } else if (t === 'expense') {
-                if (isOnline) { tOut += e.amount; netBalance -= e.amount; dailyMap[e.date] = (dailyMap[e.date]||0) + e.amount; }
-                if (isCash)   { cOut += e.amount; cNet -= e.amount; }
-            } else if (t === 'normalpos') {
-                if (isOnline) netBalance += e.amount;
-                if (isCash)   cNet += e.amount;
-            } else if (t === 'normalneg') {
-                if (isOnline) netBalance -= e.amount;
-                if (isCash)   cNet -= e.amount;
+            const t = resolveType(e);
+            if (t === 'expense' && getMode(e) === 'online') {
+                dailyMap[e.date] = (dailyMap[e.date] || 0) + e.amount;
             }
         });
 
@@ -2433,8 +2459,6 @@
         cNetEl.className = 'stat-value ' + (cNet >= 0 ? 'val-income' : 'val-expense');
 
         // Update V2.0 Insights & Budget Bar
-        const totalSpent = tOut + cOut;
-        const totalEarned = tIn + cIn;
         const budgetPercent = Math.min(100, Math.round((totalSpent / monthlyBudget) * 100));
         const budgetTextEl = document.getElementById('v2-budget-text');
         const budgetBarEl = document.getElementById('v2-budget-bar');
@@ -2474,7 +2498,7 @@
             seeAllCountEl.innerText = `(${entries.length} Total)`;
         }
         if (currentActiveView === 'all-transactions') {
-            renderAllTxGroupsOnly();
+            renderAllTransactionsView();
         }
     }
 
@@ -2514,17 +2538,9 @@
         const content = document.getElementById('all-transactions-content');
         if (!content) return;
 
-        let lifetimeIn = 0, lifetimeOut = 0, lifetimeNet = 0;
-        entries.forEach(e => {
-            const t = resolveType(e);
-            if (t === 'income' || t === 'normalpos') {
-                lifetimeIn += e.amount;
-                lifetimeNet += e.amount;
-            } else if (t === 'expense' || t === 'normalneg') {
-                lifetimeOut += e.amount;
-                lifetimeNet -= e.amount;
-            }
-        });
+        const stats = calculateFinanceStats(entries);
+        const hasCash = (stats.cIn > 0 || stats.cOut > 0 || stats.cNet !== 0);
+        const hasOnline = (stats.tIn > 0 || stats.tOut > 0 || stats.netBalance !== 0);
 
         content.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
@@ -2540,21 +2556,43 @@
                 <p style="margin:0;color:var(--text-muted);font-size:0.88rem;">Complete lifetime history segregated by month &amp; year &bull; Latest at top</p>
             </div>
 
-            <!-- Lifetime Summary Stats Grid -->
-            <div class="phonepe-stats-grid">
+            <!-- Lifetime Summary Stats Grid (Using identical formula to Home page Monthly Earned, Spent, Net) -->
+            <div class="stats-grid" style="margin-bottom:14px;">
                 <div class="stat-card">
-                    <span class="stat-label">Lifetime Received</span>
-                    <div class="stat-value val-income">${formatINR(lifetimeIn)}</div>
+                    <div class="stat-label">Lifetime Earned</div>
+                    <div class="stat-value val-income">${formatINR(stats.tIn)}</div>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-label">Lifetime Spent</span>
-                    <div class="stat-value val-expense">${formatINR(lifetimeOut)}</div>
+                    <div class="stat-label">Lifetime Spent</div>
+                    <div class="stat-value val-expense">${formatINR(stats.tOut)}</div>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-label">Net Lifetime Balance</span>
-                    <div class="stat-value ${lifetimeNet >= 0 ? 'val-income' : 'val-expense'}">${formatINR(lifetimeNet)}</div>
+                    <div class="stat-label">Lifetime Net</div>
+                    <div class="stat-value ${stats.netBalance >= 0 ? 'val-income' : 'val-expense'}">${formatINR(stats.netBalance)}</div>
                 </div>
             </div>
+
+            ${hasCash ? `
+                <div class="cash-stats-section visible" style="margin-top:4px;margin-bottom:14px;">
+                    <div class="cash-section-label">Cash Summary (Lifetime)</div>
+                    <div class="stats-grid">
+                        <div class="stat-card"><div class="stat-label">Cash Earned</div><div class="stat-value val-income">${formatINR(stats.cIn)}</div></div>
+                        <div class="stat-card"><div class="stat-label">Cash Spent</div><div class="stat-value val-expense">${formatINR(stats.cOut)}</div></div>
+                        <div class="stat-card"><div class="stat-label">Cash Net</div><div class="stat-value ${stats.cNet >= 0 ? 'val-income' : 'val-expense'}">${formatINR(stats.cNet)}</div></div>
+                    </div>
+                </div>
+            ` : ''}
+
+            ${hasCash && hasOnline ? `
+                <div style="background:rgba(15,25,54,0.5);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;font-size:0.84rem;color:var(--text-muted);">
+                    <span>Total Lifetime (Online + Cash):</span>
+                    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+                        <span>Earned: <strong class="val-income">${formatINR(stats.totalEarned)}</strong></span>
+                        <span>Spent: <strong class="val-expense">${formatINR(stats.totalSpent)}</strong></span>
+                        <span>Net: <strong class="${stats.totalNet >= 0 ? 'val-income' : 'val-expense'}">${formatINR(stats.totalNet)}</strong></span>
+                    </div>
+                </div>
+            ` : ''}
 
             <!-- Search Bar -->
             <div class="search-container" style="margin-bottom:12px;">
@@ -2663,12 +2701,28 @@
             }
 
             const mEntries = groups[mKey];
-            let mSpent = 0, mEarned = 0;
-            mEntries.forEach(e => {
-                const t = resolveType(e);
-                if (t === 'expense' || t === 'normalneg') mSpent += e.amount;
-                else if (t === 'income' || t === 'normalpos') mEarned += e.amount;
-            });
+            const mStats = calculateFinanceStats(mEntries);
+
+            let mStatsDisplay = '';
+            if (allTxFilter === 'cash') {
+                mStatsDisplay = `<span>Cash Earned: <strong style="color:var(--income);">${formatINR(mStats.cIn)}</strong></span><span>&bull; Cash Spent: <strong style="color:var(--expense);">${formatINR(mStats.cOut)}</strong></span><span>&bull; Cash Net: <strong class="${mStats.cNet >= 0 ? 'val-income' : 'val-expense'}">${formatINR(mStats.cNet)}</strong></span>`;
+            } else if (allTxFilter === 'online') {
+                mStatsDisplay = `<span>Monthly Earned: <strong style="color:var(--income);">${formatINR(mStats.tIn)}</strong></span><span>&bull; Monthly Spent: <strong style="color:var(--expense);">${formatINR(mStats.tOut)}</strong></span><span>&bull; Monthly Net: <strong class="${mStats.netBalance >= 0 ? 'val-income' : 'val-expense'}">${formatINR(mStats.netBalance)}</strong></span>`;
+            } else if (allTxFilter === 'expense') {
+                mStatsDisplay = `<span>Spent: <strong style="color:var(--expense);">${formatINR(mStats.tOut)}</strong></span>` +
+                    (mStats.cOut > 0 ? `<span>&bull; Cash Spent: <strong style="color:var(--expense);">${formatINR(mStats.cOut)}</strong></span>` : '') +
+                    `<span>&bull; Total Spent: <strong style="color:var(--expense);">${formatINR(mStats.totalSpent)}</strong></span>`;
+            } else if (allTxFilter === 'income') {
+                mStatsDisplay = `<span>Earned: <strong style="color:var(--income);">${formatINR(mStats.tIn)}</strong></span>` +
+                    (mStats.cIn > 0 ? `<span>&bull; Cash Earned: <strong style="color:var(--income);">${formatINR(mStats.cIn)}</strong></span>` : '') +
+                    `<span>&bull; Total Earned: <strong style="color:var(--income);">${formatINR(mStats.totalEarned)}</strong></span>`;
+            } else {
+                // All filter: standard Home page Monthly Earned, Spent, Net
+                mStatsDisplay = `<span>Earned: <strong style="color:var(--income);">${formatINR(mStats.tIn)}</strong></span><span>&bull; Spent: <strong style="color:var(--expense);">${formatINR(mStats.tOut)}</strong></span><span>&bull; Net: <strong class="${mStats.netBalance >= 0 ? 'val-income' : 'val-expense'}">${formatINR(mStats.netBalance)}</strong></span>`;
+                if (mStats.cIn > 0 || mStats.cOut > 0 || mStats.cNet !== 0) {
+                    mStatsDisplay += ` <span style="opacity:0.85;font-size:0.75rem;">(Cash: <strong class="${mStats.cNet >= 0 ? 'val-income' : 'val-expense'}">${formatINR(mStats.cNet)}</strong> &bull; Total Net: <strong class="${mStats.totalNet >= 0 ? 'val-income' : 'val-expense'}">${formatINR(mStats.totalNet)}</strong>)</span>`;
+                }
+            }
 
             html += `
                 <div class="phonepe-group">
@@ -2678,8 +2732,7 @@
                             <span>${monthNameYear}</span>
                         </div>
                         <div class="phonepe-month-stats">
-                            <span>Spent: <strong style="color:var(--expense);">${formatINR(mSpent)}</strong></span>
-                            ${mEarned > 0 ? `<span>&bull; Received: <strong style="color:var(--income);">${formatINR(mEarned)}</strong></span>` : ''}
+                            ${mStatsDisplay}
                             <span>&bull; ${mEntries.length} ${mEntries.length === 1 ? 'txn' : 'txns'}</span>
                         </div>
                     </div>
