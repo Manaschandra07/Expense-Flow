@@ -2689,7 +2689,7 @@
                 <p style="margin:0;color:var(--text-muted);font-size:0.88rem;">Complete lifetime history segregated by month &amp; year &bull; Latest at top</p>
             </div>
 
-            <!-- Lifetime Summary Stats Grid (Using identical formula to Home page Monthly Earned, Spent, Net) -->
+            <!-- Lifetime Summary Stats Grid -->
             <div class="stats-grid" style="margin-bottom:14px;">
                 <div class="stat-card">
                     <div class="stat-label">Lifetime Earned</div>
@@ -2698,10 +2698,6 @@
                 <div class="stat-card">
                     <div class="stat-label">Lifetime Spent</div>
                     <div class="stat-value val-expense">${formatINR(stats.tOut)}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Lifetime Net</div>
-                    <div class="stat-value ${stats.netBalance >= 0 ? 'val-income' : 'val-expense'}">${formatINR(stats.netBalance)}</div>
                 </div>
             </div>
 
